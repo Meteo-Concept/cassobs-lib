@@ -1,0 +1,20 @@
+Meteodata-monitor
+=================
+
+TODO: description
+
+Installing
+----------
+
+Meteodata-monitor is packaged with the autotools so installing can be as simple as
+
+    ./configure; make; make install
+
+You need some Boost libraries: System and Program options, at least
+version 1.52, as well as the Cassandra cpp driver version 2 (which is shipped as
+a submodule in this repository).
+
+Running
+-------
+
+TODO

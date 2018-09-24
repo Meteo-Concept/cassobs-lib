@@ -1,6 +1,6 @@
 /**
- * @file dbconnection.h
- * @brief Definition of the DbConnection class
+ * @file dbconnection_observations.h
+ * @brief Definition of the DbConnectionObservations class
  * @author Laurent Georget
  * @date 2018-09-20
  */
@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DBCONNECTION_H
-#define DBCONNECTION_H
+#ifndef DBCONNECTION_OBSERVATIONS_H
+#define DBCONNECTION_OBSERVATIONS_H
 
 #include <cstdint>
 #include <ctime>
@@ -48,7 +48,7 @@ namespace meteodata {
 	 * connector to query details about the station and insert measures in
 	 * the database periodically.
 	 */
-	class DbConnection : public DbConnectionCommon
+	class DbConnectionObservations : public DbConnectionCommon
 	{
 	public:
 		/**
@@ -57,11 +57,11 @@ namespace meteodata {
 		 * @param user the username to use
 		 * @param password the password corresponding to the username
 		 */
-		DbConnection(const std::string& address = "127.0.0.1", const std::string& user = "", const std::string& password = "");
+		DbConnectionObservations(const std::string& address = "127.0.0.1", const std::string& user = "", const std::string& password = "");
 		/**
 		 * @brief Close the connection and destroy the database handle
 		 */
-		virtual ~DbConnection() = default;
+		virtual ~DbConnectionObservations() = default;
 		/**
 		 * @brief Get the identifier of a station given its coordinates
 		 *

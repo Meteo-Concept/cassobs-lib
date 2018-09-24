@@ -1,9 +1,16 @@
 lib_LTLIBRARIES = libcassobs.la
+include_HEADERS = \
+		dbconnection_observations.h\
+		dbconnection_common.h\
+		dbconnection_minmax.h\
+		dbconnection_month_minmax.h\
+		message.h
+
 libcassobs_la_SOURCES = \
-		    dbconnection.cpp\
-		    dbconnection.h\
 		    dbconnection_common.cpp\
 		    dbconnection_common.h\
+		    dbconnection_observations.cpp\
+		    dbconnection_observations.h\
 		    dbconnection_minmax.cpp\
 		    dbconnection_minmax.h\
 		    dbconnection_month_minmax.cpp\

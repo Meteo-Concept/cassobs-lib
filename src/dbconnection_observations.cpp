@@ -1,11 +1,11 @@
 /**
- * @file dbconnection.cpp
- * @brief Implementation of the DbConnection class
+ * @file dbconnection_observations.cpp
+ * @brief Implementation of the DbConnectionObservations class
  * @author Laurent Georget
- * @date 2016-10-05
+ * @date 2018-09-21
  */
 /*
- * Copyright (C) 2016  SAS Météo Concept <contact@meteo-concept.fr>
+ * Copyright (C) 2018  SAS Météo Concept <contact@meteo-concept.fr>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,10 +32,10 @@
 #include <unistd.h>
 #include <date.h>
 
-#include "dbconnection.h"
+#include "dbconnection_observations.h"
 
 namespace meteodata {
-	DbConnection::DbConnection(const std::string& address, const std::string& user, const std::string& password) :
+	DbConnectionObservations::DbConnectionObservations(const std::string& address, const std::string& user, const std::string& password) :
 		DbConnectionCommon(address, user, password),
 		_selectStationByCoords{nullptr, cass_prepared_free},
 		_selectStationDetails{nullptr, cass_prepared_free},
@@ -50,7 +50,7 @@ namespace meteodata {
 		prepareStatements();
 	}
 
-	void DbConnection::prepareStatements()
+	void DbConnectionObservations::prepareStatements()
 	{
 		CassFuture* prepareFuture = cass_session_prepare(_session.get(), "SELECT station FROM meteodata.coordinates WHERE elevation = ? AND latitude = ? AND longitude = ?");
 		CassError rc = cass_future_error_code(prepareFuture);
@@ -248,7 +248,7 @@ namespace meteodata {
 	}
 
 	// /!\ must be called under _selectMutex lock
-	bool DbConnection::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
+	bool DbConnectionObservations::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
 	{
 		CassFuture* query;
 		CassStatement* statement = cass_prepared_bind(_selectStationDetails.get());
@@ -282,7 +282,7 @@ namespace meteodata {
 	}
 
 	// /!\ must be called under _selectMutex lock
-	bool DbConnection::getLastDataInsertionTime(const CassUuid& uuid, time_t& lastDataInsertionTime)
+	bool DbConnectionObservations::getLastDataInsertionTime(const CassUuid& uuid, time_t& lastDataInsertionTime)
 	{
 		CassFuture* query;
 		CassStatement* statement = cass_prepared_bind(_selectLastDataInsertionTime.get());
@@ -312,7 +312,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnection::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime)
+	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime)
 	{
 		CassFuture* query;
 		{ /* mutex scope */
@@ -344,7 +344,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnection::insertDataPoint(const CassUuid station, const Message& msg)
+	bool DbConnectionObservations::insertDataPoint(const CassUuid station, const Message& msg)
 	{
 		CassFuture* query;
 		{ /* mutex scope */
@@ -371,7 +371,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnection::insertV2DataPoint(const CassUuid station, const Message& msg)
+	bool DbConnectionObservations::insertV2DataPoint(const CassUuid station, const Message& msg)
 	{
 		bool ret = true;
 
@@ -399,7 +399,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnection::updateLastArchiveDownloadTime(const CassUuid station, const time_t& time)
+	bool DbConnectionObservations::updateLastArchiveDownloadTime(const CassUuid station, const time_t& time)
 	{
 		CassFuture* query;
 		{ /* mutex scope */
@@ -427,7 +427,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnection::getAllWeatherlinkStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations)
+	bool DbConnectionObservations::getAllWeatherlinkStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectWeatherlinkStations.get()),
@@ -470,7 +470,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnection::getAllIcaos(std::vector<std::tuple<CassUuid, std::string>>& stations)
+	bool DbConnectionObservations::getAllIcaos(std::vector<std::tuple<CassUuid, std::string>>& stations)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectAllIcaos.get()),
@@ -504,7 +504,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnection::deleteDataPoints(const CassUuid& station, const date::sys_days& day, const date::sys_seconds& start, const date::sys_seconds& end)
+	bool DbConnectionObservations::deleteDataPoints(const CassUuid& station, const date::sys_days& day, const date::sys_seconds& start, const date::sys_seconds& end)
 	{
 		CassFuture* query;
 		{ /* mutex scope */

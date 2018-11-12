@@ -34,3 +34,4 @@ depcomp
 cassobs
 build/
 Doxyfile
+.db_credentials

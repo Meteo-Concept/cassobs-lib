@@ -33,19 +33,22 @@
 #include <date.h>
 
 #include "dbconnection_observations.h"
+#include "observation.h"
 
 namespace meteodata {
 	DbConnectionObservations::DbConnectionObservations(const std::string& address, const std::string& user, const std::string& password) :
 		DbConnectionCommon(address, user, password),
-		_selectStationByCoords{nullptr, cass_prepared_free},
-		_selectStationDetails{nullptr, cass_prepared_free},
-		_selectAllIcaos{nullptr, cass_prepared_free},
-		_selectLastDataInsertionTime{nullptr, cass_prepared_free},
-		_insertDataPoint{nullptr, cass_prepared_free},
-		_insertDataPointInNewDB{nullptr, cass_prepared_free},
-		_updateLastArchiveDownloadTime{nullptr, cass_prepared_free},
-		_selectWeatherlinkStations{nullptr, cass_prepared_free},
-		_deleteDataPoints{nullptr, cass_prepared_free}
+		_selectStationByCoords{nullptr, &cass_prepared_free},
+		_selectStationDetails{nullptr, &cass_prepared_free},
+		_selectAllIcaos{nullptr, &cass_prepared_free},
+		_selectLastDataInsertionTime{nullptr, &cass_prepared_free},
+		_selectLastDataBefore{nullptr, &cass_prepared_free},
+		_insertDataPoint{nullptr, &cass_prepared_free},
+		_insertDataPointInNewDB{nullptr, &cass_prepared_free},
+		_insertDataPointInMonitoringDB{nullptr, &cass_prepared_free},
+		_updateLastArchiveDownloadTime{nullptr, &cass_prepared_free},
+		_selectWeatherlinkStations{nullptr, &cass_prepared_free},
+		_deleteDataPoints{nullptr, &cass_prepared_free}
 	{
 		prepareStatements();
 	}
@@ -92,6 +95,39 @@ namespace meteodata {
 		_selectLastDataInsertionTime.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT "
+			"station,"
+			"day, time,"
+			"barometer,"
+			"dewpoint,"
+			"extrahum1, extrahum2,"
+			"extratemp1,extratemp2, extratemp3,"
+			"heatindex,"
+			"insidehum,insidetemp,"
+			"leaftemp1, leaftemp2,"
+			"leafwetnesses1, leafwetnesses2,"
+			"outsidehum,outsidetemp,"
+			"rainrate, rainfall,"
+			"et,"
+			"soilmoistures1, soilmoistures2, soilmoistures3,"
+				"soilmoistures4,"
+			"soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"solarrad,"
+			"thswindex,"
+			"uv,"
+			"windchill,"
+			"winddir, windgust, windspeed,"
+			"insolation_time "
+			" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectLastDataBefore: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectLastDataBefore.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
 		prepareFuture = cass_session_prepare(_session.get(),
 			"INSERT INTO meteodata.meteo ("
 			"station,"
@@ -122,33 +158,33 @@ namespace meteodata {
 			"sunrise, sunset,"
 			"rain_archive, etp_archive)"
 			"VALUES ("
-			"?,"
-			"?,"
-			"?,?,?,?,"
-			"?,?,"
-			"?,?,"
-			"?,?,?,?,"
-				"?,?,?,"
-			"?,?,?,?,"
-			"?,?,?,?,"
-			"?,?,?,?,"
-				"?,?,?,"
-			"?,?,?,"
-				"?,"
-			"?,?,?,"
-				"?,"
-			"?,?,"
-			"?,?,"
-			"?,?,"
-			"?,?,?,?,"
-			"?,?,?,"
-			"?,?,"
-			"?,?,"
-			"?,?,?,?,"
-			"?,?,?,"
-			"?,?,"
-			"?,?,"
-			"?,?)");
+			"?,"			// "station,"
+			"?,"			// "time,"
+			"?,?,?,?,"		// "bartrend,barometer,barometer_abs,barometer_raw,"
+			"?,?,"			// "insidetemp,outsidetemp,"
+			"?,?,"			// "insidehum,outsidehum,"
+			"?,?,?,?,"		// "extratemp1,extratemp2, extratemp3,extratemp4,"
+				"?,?,?,"	// 	"extratemp5, extratemp6,extratemp7,"
+			"?,?,?,?,"		// "soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"?,?,?,?,"		// "leaftemp1, leaftemp2, leaftemp3, leaftemp4,"
+			"?,?,?,?,"		// "extrahum1, extrahum2, extrahum3, extrahum4,"
+				"?,?,?,"	// 	"extrahum5, extrahum6, extrahum7,"
+			"?,?,?,"		// "soilmoistures1, soilmoistures2, soilmoistures3,"
+				"?,"		// 	"soilmoistures4,"
+			"?,?,?,"		// "leafwetnesses1, leafwetnesses2, leafwetnesses3,"
+				"?,"		// 	"leafwetnesses4,"
+			"?,?,"			// "windspeed, winddir,"
+			"?,?,"			// "avgwindspeed_10min, avgwindspeed_2min,"
+			"?,?,"			// "windgust_10min, windgustdir,"
+			"?,?,?,?,"		// "rainrate, rain_15min, rain_1h, rain_24h,"
+			"?,?,?,"		// "dayrain, monthrain, yearrain,"
+			"?,?,"			// "stormrain, stormstartdate,"
+			"?,?,"			// "UV, solarrad,"
+			"?,?,?,?,"		// "dewpoint, heatindex, windchill, thswindex,"
+			"?,?,?,"		// "dayET, monthET, yearET,"
+			"?,?,"			// "forecast, forecast_icons,"
+			"?,?,"			// "sunrise, sunset,"
+			"?,?)");		// "rain_archive, etp_archive,"
 
 		rc = cass_future_error_code(prepareFuture);
 		if (rc != CASS_OK) {
@@ -161,6 +197,65 @@ namespace meteodata {
 
 		prepareFuture = cass_session_prepare(_session.get(),
 			"INSERT INTO meteodata_v2.meteo ("
+			"station,"
+			"day, time,"
+			"barometer,"
+			"dewpoint,"
+			"extrahum1, extrahum2,"
+			"extratemp1,extratemp2, extratemp3,"
+			"heatindex,"
+			"insidehum,insidetemp,"
+			"leaftemp1, leaftemp2,"
+			"leafwetnesses1, leafwetnesses2,"
+			"outsidehum,outsidetemp,"
+			"rainrate, rainfall,"
+			"et,"
+			"soilmoistures1, soilmoistures2, soilmoistures3,"
+				"soilmoistures4,"
+			"soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"solarrad,"
+			"thswindex,"
+			"uv,"
+			"windchill,"
+			"winddir, windgust, windspeed,"
+			"insolation_time,"
+			"rainfall24, insolation_time24)"
+			"VALUES ("
+			"?,"		// "station,"
+			"?, ?,"		// "day, time,"
+			"?,"		// "barometer,"
+			"?,"		// "dewpoint,"
+			"?, ?,"		// "extrahum1, extrahum2,"
+			"?,?, ?,"	// "extratemp1,extratemp2, extratemp3,"
+			"?,"		// "heatindex,"
+			"?,?,"		// "insidehum,insidetemp,"
+			"?, ?,"		// "leaftemp1, leaftemp2,"
+			"?, ?,"		// "leafwetnesses1, leafwetnesses2,"
+			"?,?,"		// "outsidehum,outsidetemp,"
+			"?, ?,"		// "rainrate, rainfall,"
+			"?,"		// "et,"
+			"?, ?, ?,"	// "soilmoistures1, soilmoistures2, soilmoistures3,"
+				"?,"	// 	"soilmoistures4,"
+			"?, ?, ?, ?,"	// "soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"?,"		// "solarrad,"
+			"?,"		// "thswindex,"
+			"?,"		// "uv,"
+			"?,"		// "windchill,"
+			"?, ?, ?,"	// "winddir, windgust, windspeed,"
+			"?,"		// "insolation_time,"
+			"?,?)");	// "rainfall24, insolation_time24)"
+
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement insertdataPointInNewDB: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_insertDataPointInNewDB.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(),
+			"INSERT INTO meteodata_v2.monitoring_observations ("
 			"station,"
 			"day, time,"
 			"barometer,"
@@ -209,11 +304,11 @@ namespace meteodata {
 
 		rc = cass_future_error_code(prepareFuture);
 		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement insertdataPointInNewDB: ");
+			std::string desc("Could not prepare statement insertdataPointInMonitoringDB: ");
 			desc.append(cass_error_desc(rc));
 			throw std::runtime_error(desc);
 		}
-		_insertDataPointInNewDB.reset(cass_future_get_prepared(prepareFuture));
+		_insertDataPointInMonitoringDB.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(), "UPDATE meteodata.stations SET last_archive_download = ? WHERE id = ?");
@@ -312,6 +407,74 @@ namespace meteodata {
 		return ret;
 	}
 
+	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
+	{
+		CassFuture* query;
+		CassStatement* statement = cass_prepared_bind(_selectLastDataBefore.get());
+		std::cerr << "Statement prepared" << std::endl;
+		std::cerr << "boundary: " << boundary << std::endl;
+		cass_statement_bind_uuid(statement, 0, station);
+		cass_statement_bind_uint32(statement, 1, cass_date_from_epoch(boundary));
+		cass_statement_bind_int64(statement, 2, boundary * 1000);
+		query = cass_session_execute(_session.get(), statement);
+		std::cerr << "Executed statement getLastDataBefore" << std::endl;
+		cass_statement_free(statement);
+
+		const CassResult* result = cass_future_get_result(query);
+		bool ret = false;
+		if (result) {
+			const CassRow* row = cass_result_first_row(result);
+			if (row) {
+				// First three columns are the primary key so we don't expect them to be null
+				const CassValue* value = cass_row_get_column(row, 0);
+				CassUuid u;
+				cass_value_get_uuid(value, &u);
+				//std::cerr << "We have a UUID" << std::endl;
+				obs.setStation(u);
+				// Discard the date, and deal only with the timestamp
+				value = cass_row_get_column(row, 2);
+				cass_int64_t t;
+				cass_value_get_int64(value, &t);
+				obs.setTimestamp(date::sys_seconds{chrono::seconds(t / 1000)});
+
+				// Then, all the rest
+				for (const auto& var : {
+						"barometer", "dewpoint", "extratemp1", "extratemp2",
+						"extratemp3", "heatindex", "insidetemp", "leaftemp1",
+						"leaftemp2", "outsidetemp", "rainrate", "rainfall",
+						"et", "soiltemp1", "soiltemp2", "soiltemp3", "soiltemp4",
+						"thswindex", "windchill", "windgust", "windspeed"
+					}) {
+					value = cass_row_get_column_by_name(row, var);
+					if (!cass_value_is_null(value)) {
+						float f;
+						//std::cerr << "We have variable " << var << std::endl;
+						cass_value_get_float(value, &f);
+						obs.set(var, f);
+					}
+				}
+				for (const auto& var : {
+						"insidehum", "leafwetnesses1", "leafwetnesses2",
+						"outsidehum", "soilmoistures1", "soilmoistures2",
+						"soilmoistures3", "soilmoistures4", "uv", "winddir",
+						"solarrad", "insolation_time"
+					}) {
+					value = cass_row_get_column_by_name(row, var);
+					if (!cass_value_is_null(value)) {
+						cass_int32_t i;
+						//std::cerr << "We have variable " << var << std::endl;
+						cass_value_get_int32(value, &i);
+						obs.set(var, i);
+					}
+				}
+			}
+			cass_result_free(result);
+		}
+		cass_future_free(query);
+
+		return ret;
+	}
+
 	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime)
 	{
 		CassFuture* query;
@@ -380,6 +543,34 @@ namespace meteodata {
 			std::lock_guard<std::mutex> queryMutex{_insertMutex};
 			std::cerr << "About to insert data point in database" << std::endl;
 			CassStatement* statement = cass_prepared_bind(_insertDataPointInNewDB.get());
+			msg.populateV2DataPoint(station, statement);
+			query = cass_session_execute(_session.get(), statement);
+			cass_statement_free(statement);
+		}
+
+		const CassResult* result = cass_future_get_result(query);
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query, &error_message, &error_message_length);
+			std::cerr << "Error from Cassandra: " << error_message << std::endl;
+			ret = false;
+		}
+		cass_result_free(result);
+		cass_future_free(query);
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::insertMonitoringDataPoint(const CassUuid station, const Message& msg)
+	{
+		bool ret = true;
+
+		CassFuture* query;
+		{ /* mutex scope */
+			std::lock_guard<std::mutex> queryMutex{_insertMutex};
+			std::cerr << "About to insert reconstructed data point in database" << std::endl;
+			CassStatement* statement = cass_prepared_bind(_insertDataPointInMonitoringDB.get());
 			msg.populateV2DataPoint(station, statement);
 			query = cass_session_execute(_session.get(), statement);
 			cass_statement_free(statement);

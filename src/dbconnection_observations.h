@@ -39,6 +39,7 @@
 
 #include "message.h"
 #include "dbconnection_common.h"
+#include "observation.h"
 
 namespace meteodata {
 	/**
@@ -102,6 +103,21 @@ namespace meteodata {
 		 */
 		bool insertDataPoint(const CassUuid station, const Message& message);
 		/**
+		 * @brief Insert a new data point in the monitoring database
+		 *
+		 * This method is very similar to \a insertDataPoint() but uses the
+		 * new database scheme, and inserts the data point in a special database
+		 * used to monitor the data stations.
+		 *
+		 * @param station The identifier of the station
+		 * @param message A message from a meteo station connector
+		 * containing the measurements to insert in the database
+		 *
+		 * @return True is the measure data point could be succesfully
+		 * inserted, false otherwise
+		 */
+		bool insertMonitoringDataPoint(const CassUuid station, const Message& message);
+		/**
 		 * @brief Insert a new data point in the V2 database
 		 *
 		 * This method is very similar to \a insertDataPoint() but uses the
@@ -161,6 +177,16 @@ namespace meteodata {
 		 * query failed
 		 */
 		bool getLastDataInsertionTime(const CassUuid& station, time_t& lastDataInsertionTime);
+		/**
+		 * @brief Fetch the latest datapoint before some datetime
+		 *
+		 * @param station The station of interest
+		 * @param boundary The timestamp the data to be fetched must be immediately
+		 * anterior to
+		 *
+		 * @return True if everything went well, false if the query failed
+		 */
+		bool getLastDataBefore(const CassUuid& station, time_t boundary, Observation& values);
 
 		/**
 		 * @brief Get Weatherlink connection information for all the stations that send their
@@ -215,6 +241,10 @@ namespace meteodata {
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectLastDataInsertionTime;
 		/**
+		 * @brief The prepared statement for the getLastDataBefore() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectLastDataBefore;
+		/**
 		 * @brief The prepared statement for the insertDataPoint() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPoint;
@@ -222,6 +252,10 @@ namespace meteodata {
 		 * @brief The prepared statement for the insertV2DataPoint() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPointInNewDB;
+		/**
+		 * @brief The prepared statement for the insertMonitoringDataPoint() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPointInMonitoringDB;
 		/**
 		 * @brief The prepared statement for the
 		 * updateLastArchiveDownload() method

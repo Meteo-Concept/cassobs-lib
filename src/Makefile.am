@@ -4,6 +4,7 @@ include_HEADERS = \
 		dbconnection_common.h\
 		dbconnection_minmax.h\
 		dbconnection_month_minmax.h\
+		observation.h \
 		message.h
 
 libcassobs_la_SOURCES = \
@@ -15,9 +16,20 @@ libcassobs_la_SOURCES = \
 		    dbconnection_minmax.h\
 		    dbconnection_month_minmax.cpp\
 		    dbconnection_month_minmax.h\
+		    observation.h \
+		    observation.cpp \
 		    message.h
 
 libcassobs_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CPPFLAGS) $(DATE_CPPFLAGS)
 libcassobs_la_CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
 libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS)
 libcassobs_la_LDFLAGS = -version-info 0:0:0
+
+check_PROGRAMS=get_last_data
+TESTS=$(check_PROGRAMS)
+
+get_last_data_SOURCES = \
+			tests/get_last_data.cpp
+get_last_data_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
+get_last_data_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
+get_last_data_LDADD = libcassobs.la $(libcassobs_la_LIBADD)

@@ -141,6 +141,7 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 			std::pair<bool, float> dewpoint_max;
 			std::pair<bool, float> dewpoint_avg;
 			std::pair<bool, float> et;
+			std::pair<bool, int> insolation_time;
 
 			// Computed values
 			std::pair<bool, float> dayRain;
@@ -199,12 +200,6 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MAX(rainrate)       AS rainrate_max"
 			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
 				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time < ?";
-		/**
-		 * @brief The first prepared statement for the getValues()
-		 * method
-		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAfter6h;
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAfter18h;
 
 		static constexpr char SELECT_VALUES_ALL_DAY_STMT[] =
 			"SELECT "
@@ -252,14 +247,10 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MIN(dewpoint)                AS dewpoint_min,"
 				"MAX(dewpoint)                AS dewpoint_max,"
 				"meteodata_v2.avg(dewpoint)   AS dewpoint_avg,"
-				"SUM(et)                      AS et"
+				"SUM(et)                      AS et,"
+				"SUM(insolation_time)         AS insolation_time "
 			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
 				" FROM meteodata_v2.meteo WHERE station = ? AND day = ?";
-		/**
-		 * @brief The first prepared statement for the getValues()
-		 * method
-		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAllDay;
 
 		static constexpr char SELECT_VALUES_AFTER_18H_STMT[] =
 			"SELECT "
@@ -292,10 +283,14 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MIN(extratemp3)     AS extraTemp3_min "
 			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
 				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time < ?";
+
 		/**
 		 * @brief The first prepared statement for the getValues()
 		 * method
 		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAfter6h;
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAfter18h;
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAllDay;
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesBefore6h;
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesBefore18h;
 
@@ -337,7 +332,8 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 			"uv_max, uv_avg,"
 			"winddir,"
 			"windgust_max, windgust_avg,"
-			"windspeed_max, windspeed_avg)"
+			"windspeed_max, windspeed_avg,"
+			"insolation_time)"
 			" VALUES ("
 			"?,"
 			"?, ?,"
@@ -371,7 +367,8 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 			"?, ?,"
 			"?,"
 			"?, ?,"
-			"?, ?)";
+			"?, ?,"
+			"?)";
 		/**
 		 * @brief The prepared statement for the insetDataPoint() method
 		 */

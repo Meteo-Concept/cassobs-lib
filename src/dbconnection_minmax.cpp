@@ -385,6 +385,18 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 			storeCassandraFloat(row, res++, values.dewpoint_avg);
 			storeCassandraFloat(row, res++, values.et);
 			storeCassandraInt(row, res++, values.insolation_time);
+
+			// Overwrite rainfall and insolation_time if cumulative values are available
+			const CassValue* raw = cass_row_get_column(row, res++);
+			if (!cass_value_is_null(raw)) {
+				values.rainfall.first = true;
+				cass_value_get_float(raw, &values.rainfall.second);
+			}
+			raw = cass_row_get_column(row, res++);
+			if (!cass_value_is_null(raw)) {
+				values.insolation_time.first = true;
+				cass_value_get_int32(raw, &values.insolation_time.second);
+			}
 			ret = true;
 		}
 	}

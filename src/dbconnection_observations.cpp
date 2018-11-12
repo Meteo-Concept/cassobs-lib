@@ -45,6 +45,7 @@ namespace meteodata {
 		_selectLastDataBefore{nullptr, &cass_prepared_free},
 		_insertDataPoint{nullptr, &cass_prepared_free},
 		_insertDataPointInNewDB{nullptr, &cass_prepared_free},
+		_insertEntireDayValuesInNewDB{nullptr, &cass_prepared_free},
 		_insertDataPointInMonitoringDB{nullptr, &cass_prepared_free},
 		_updateLastArchiveDownloadTime{nullptr, &cass_prepared_free},
 		_selectWeatherlinkStations{nullptr, &cass_prepared_free},
@@ -218,9 +219,8 @@ namespace meteodata {
 			"uv,"
 			"windchill,"
 			"winddir, windgust, windspeed,"
-			"insolation_time,"
-			"rainfall24, insolation_time24)"
-			"VALUES ("
+			"insolation_time) "
+			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
 			"?,"		// "barometer,"
@@ -242,8 +242,7 @@ namespace meteodata {
 			"?,"		// "uv,"
 			"?,"		// "windchill,"
 			"?, ?, ?,"	// "winddir, windgust, windspeed,"
-			"?,"		// "insolation_time,"
-			"?,?)");	// "rainfall24, insolation_time24)"
+			"?)");		// "insolation_time)"
 
 		rc = cass_future_error_code(prepareFuture);
 		if (rc != CASS_OK) {
@@ -252,6 +251,25 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_insertDataPointInNewDB.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(),
+			"INSERT INTO meteodata_v2.meteo ("
+			"station,"
+			"day, time,"
+			"rainfall24, insolation_time24) "
+			" VALUES ("
+			"?,"		// "station,"
+			"?, ?,"		// "day, time,"
+			"?, ?)");	// "rainfall24, insolation_time24)"
+
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement insertEntireDayValuesInNewDB: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_insertEntireDayValuesInNewDB.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(),
@@ -544,6 +562,40 @@ namespace meteodata {
 			std::cerr << "About to insert data point in database" << std::endl;
 			CassStatement* statement = cass_prepared_bind(_insertDataPointInNewDB.get());
 			msg.populateV2DataPoint(station, statement);
+			query = cass_session_execute(_session.get(), statement);
+			cass_statement_free(statement);
+		}
+
+		const CassResult* result = cass_future_get_result(query);
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query, &error_message, &error_message_length);
+			std::cerr << "Error from Cassandra: " << error_message << std::endl;
+			ret = false;
+		}
+		cass_result_free(result);
+		cass_future_free(query);
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24)
+	{
+		bool ret = true;
+
+		CassFuture* query;
+		{ /* mutex scope */
+			std::lock_guard<std::mutex> queryMutex{_insertMutex};
+			std::cerr << "About to insert entire day values in database" << std::endl;
+			CassStatement* statement = cass_prepared_bind(_insertDataPointInNewDB.get());
+			cass_statement_bind_uuid(statement, 0, station);
+			cass_statement_bind_uint32(statement, 1, cass_date_from_epoch(time));
+			cass_statement_bind_int64(statement, 2, time * 1000);
+			if (rainfall24.first)
+				cass_statement_bind_float(statement, 3, rainfall24.second);
+			if (insolationTime24.first)
+				cass_statement_bind_int64(statement, 4, insolationTime24.second);
 			query = cass_session_execute(_session.get(), statement);
 			cass_statement_free(statement);
 		}

@@ -248,7 +248,9 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MAX(dewpoint)                AS dewpoint_max,"
 				"meteodata_v2.avg(dewpoint)   AS dewpoint_avg,"
 				"SUM(et)                      AS et,"
-				"SUM(insolation_time)         AS insolation_time "
+				"SUM(insolation_time)         AS insolation_time,"
+				"rainfall24                   AS rainfall24,"
+				"insolation_time24            AS insolation_time24 "
 			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
 				" FROM meteodata_v2.meteo WHERE station = ? AND day = ?";
 

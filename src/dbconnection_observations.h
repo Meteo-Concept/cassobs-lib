@@ -121,7 +121,8 @@ namespace meteodata {
 		 * @brief Insert a new data point in the V2 database
 		 *
 		 * This method is very similar to \a insertDataPoint() but uses the
-		 * new database scheme.
+		 * new database scheme. It ignores cumulative values such as rainfall24
+		 * and insolation_time24.
 		 *
 		 * @param station The identifier of the station
 		 * @param message A message from a meteo station connector
@@ -131,6 +132,32 @@ namespace meteodata {
 		 * inserted, false otherwise
 		 */
 		bool insertV2DataPoint(const CassUuid station, const Message& message);
+
+		/**
+		 * @brief Insert a new special data point in the V2 database
+		 *
+		 * This method uses the new database scheme. Only the special
+		 * variables rainfall24 and insolation_time24 corresponding to
+		 * the cumulative values of the rainfall and the total
+		 * insolation duration are considered in this method. These are
+		 * useful for stations that report grand totals with a higher
+		 * precision than individual measurements.
+		 *
+		 * @param station The identifier of the station
+		 * @param rainfall24 The rainfall over the day (from 6h UTC the
+		 * very day to 6h UTC the next day). This is a pair
+		 * (bool,float), the second element is the value, it is taken
+		 * into account if and only if the first element is true.
+		 * @param insolationTime24 The insolation total duration in
+		 * minutes over the day (from 0h UTC to 0h UTC the next day.)
+		 * This is a pair (bool,float), the second element is the
+		 * value, it is taken into account if and only if the first
+		 * element is true.
+		 *
+		 * @return True is the measure data point could be succesfully
+		 * inserted, false otherwise
+		 */
+		bool insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24);
 
 		/**
 		 * @brief Insert in the database the time of the last archive
@@ -252,6 +279,10 @@ namespace meteodata {
 		 * @brief The prepared statement for the insertV2DataPoint() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPointInNewDB;
+		/**
+		 * @brief The prepared statement for the insertV2EntireDayValues() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertEntireDayValuesInNewDB;
 		/**
 		 * @brief The prepared statement for the insertMonitoringDataPoint() method
 		 */

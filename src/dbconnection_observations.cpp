@@ -588,7 +588,7 @@ namespace meteodata {
 		{ /* mutex scope */
 			std::lock_guard<std::mutex> queryMutex{_insertMutex};
 			std::cerr << "About to insert entire day values in database" << std::endl;
-			CassStatement* statement = cass_prepared_bind(_insertDataPointInNewDB.get());
+			CassStatement* statement = cass_prepared_bind(_insertEntireDayValuesInNewDB.get());
 			cass_statement_bind_uuid(statement, 0, station);
 			cass_statement_bind_uint32(statement, 1, cass_date_from_epoch(time));
 			cass_statement_bind_int64(statement, 2, time * 1000);

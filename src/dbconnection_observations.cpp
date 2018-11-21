@@ -22,7 +22,6 @@
  */
 
 #include <iostream>
-#include <mutex>
 #include <exception>
 #include <vector>
 #include <utility>
@@ -360,21 +359,26 @@ namespace meteodata {
 		cass_future_free(prepareFuture);
 	}
 
-	// /!\ must be called under _selectMutex lock
 	bool DbConnectionObservations::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
 	{
-		CassFuture* query;
-		CassStatement* statement = cass_prepared_bind(_selectStationDetails.get());
-		std::cerr << "Statement prepared" << std::endl;
-		cass_statement_bind_uuid(statement, 0, uuid);
-		query = cass_session_execute(_session.get(), statement);
-		std::cerr << "Executed statement getStationDetails" << std::endl;
-		cass_statement_free(statement);
+		std::cerr << "About to execute statement getStationDetails" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectStationDetails.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_uuid(statement.get(), 0, uuid);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
 
-		const CassResult* result = cass_future_get_result(query);
 		bool ret = false;
 		if (result) {
-			const CassRow* row = cass_result_first_row(result);
+			const CassRow* row = cass_result_first_row(result.get());
 			if (row) {
 				const char *stationName;
 				size_t size;
@@ -388,27 +392,30 @@ namespace meteodata {
 				ret = true;
 			}
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
 
-	// /!\ must be called under _selectMutex lock
 	bool DbConnectionObservations::getLastDataInsertionTime(const CassUuid& uuid, time_t& lastDataInsertionTime)
 	{
-		CassFuture* query;
-		CassStatement* statement = cass_prepared_bind(_selectLastDataInsertionTime.get());
-		std::cerr << "Statement prepared" << std::endl;
-		cass_statement_bind_uuid(statement, 0, uuid);
-		query = cass_session_execute(_session.get(), statement);
-		std::cerr << "Executed statement getLastDataInsertionTime" << std::endl;
-		cass_statement_free(statement);
+		std::cerr << "About to execute statement getLastDataInsertionTime" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectLastDataInsertionTime.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_uuid(statement.get(), 0, uuid);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
 
-		const CassResult* result = cass_future_get_result(query);
 		bool ret = false;
 		if (result) {
-			const CassRow* row = cass_result_first_row(result);
+			const CassRow* row = cass_result_first_row(result.get());
 			ret = true;
 			if (row) {
 				cass_int64_t insertionTimeMillisec;
@@ -419,29 +426,32 @@ namespace meteodata {
 				lastDataInsertionTime = 0;
 			}
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
 
 	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
 	{
-		CassFuture* query;
-		CassStatement* statement = cass_prepared_bind(_selectLastDataBefore.get());
-		std::cerr << "Statement prepared" << std::endl;
-		std::cerr << "boundary: " << boundary << std::endl;
-		cass_statement_bind_uuid(statement, 0, station);
-		cass_statement_bind_uint32(statement, 1, cass_date_from_epoch(boundary));
-		cass_statement_bind_int64(statement, 2, boundary * 1000);
-		query = cass_session_execute(_session.get(), statement);
-		std::cerr << "Executed statement getLastDataBefore" << std::endl;
-		cass_statement_free(statement);
+		std::cerr << "About to execute statement getLastDataBefore" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectLastDataBefore.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(boundary));
+		cass_statement_bind_int64(statement.get(), 2, boundary * 1000);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
 
-		const CassResult* result = cass_future_get_result(query);
 		bool ret = false;
 		if (result) {
-			const CassRow* row = cass_result_first_row(result);
+			const CassRow* row = cass_result_first_row(result.get());
 			if (row) {
 				// First three columns are the primary key so we don't expect them to be null
 				const CassValue* value = cass_row_get_column(row, 0);
@@ -486,32 +496,33 @@ namespace meteodata {
 					}
 				}
 			}
-			cass_result_free(result);
 		}
-		cass_future_free(query);
 
 		return ret;
 	}
 
 	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime)
 	{
-		CassFuture* query;
-		{ /* mutex scope */
-			std::lock_guard<std::mutex> queryMutex{_selectMutex};
-			CassStatement* statement = cass_prepared_bind(_selectStationByCoords.get());
-			std::cerr << "Statement prepared" << std::endl;
-			cass_statement_bind_int32(statement, 0, elevation);
-			cass_statement_bind_int32(statement, 1, latitude);
-			cass_statement_bind_int32(statement, 2, longitude);
-			query = cass_session_execute(_session.get(), statement);
-			std::cerr << "Executed statement getStationByCoords" << std::endl;
-			cass_statement_free(statement);
-		}
+		std::cerr << "About to execute statement getStationByCoords" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectStationByCoords.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_int32(statement.get(), 0, elevation);
+		cass_statement_bind_int32(statement.get(), 1, latitude);
+		cass_statement_bind_int32(statement.get(), 2, longitude);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
 
-		const CassResult* result = cass_future_get_result(query);
 		bool ret = false;
 		if (result) {
-			const CassRow* row = cass_result_first_row(result);
+			const CassRow* row = cass_result_first_row(result.get());
 			if (row) {
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				ret = getStationDetails(station, name, pollPeriod, lastArchiveDownloadTime);
@@ -519,153 +530,159 @@ namespace meteodata {
 					getLastDataInsertionTime(station, lastDataInsertionTime);
 			}
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
 
 	bool DbConnectionObservations::insertDataPoint(const CassUuid station, const Message& msg)
 	{
-		CassFuture* query;
-		{ /* mutex scope */
-			std::lock_guard<std::mutex> queryMutex{_insertMutex};
-			std::cerr << "About to insert data point in database" << std::endl;
-			CassStatement* statement = cass_prepared_bind(_insertDataPoint.get());
-			msg.populateDataPoint(station, statement);
-			query = cass_session_execute(_session.get(), statement);
-			cass_statement_free(statement);
-		}
+		std::cerr << "About to insert data point in database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertDataPoint.get()),
+			cass_statement_free
+		};
+		msg.populateDataPoint(station, statement.get());
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
 
-		const CassResult* result = cass_future_get_result(query);
 		bool ret = true;
 		if (!result) {
 			const char* error_message;
 			size_t error_message_length;
-			cass_future_error_message(query, &error_message, &error_message_length);
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
 			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
 
 	bool DbConnectionObservations::insertV2DataPoint(const CassUuid station, const Message& msg)
 	{
+		std::cerr << "About to insert data point in database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertDataPointInNewDB.get()),
+			cass_statement_free
+		};
+		msg.populateV2DataPoint(station, statement.get());
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
 		bool ret = true;
-
-		CassFuture* query;
-		{ /* mutex scope */
-			std::lock_guard<std::mutex> queryMutex{_insertMutex};
-			std::cerr << "About to insert data point in database" << std::endl;
-			CassStatement* statement = cass_prepared_bind(_insertDataPointInNewDB.get());
-			msg.populateV2DataPoint(station, statement);
-			query = cass_session_execute(_session.get(), statement);
-			cass_statement_free(statement);
-		}
-
-		const CassResult* result = cass_future_get_result(query);
 		if (!result) {
 			const char* error_message;
 			size_t error_message_length;
-			cass_future_error_message(query, &error_message, &error_message_length);
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
 			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
 
 	bool DbConnectionObservations::insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24)
 	{
+		std::cerr << "About to insert entire day values in database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertEntireDayValuesInNewDB.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(time));
+		cass_statement_bind_int64(statement.get(), 2, time * 1000);
+		if (rainfall24.first)
+			cass_statement_bind_float(statement.get(), 3, rainfall24.second);
+		if (insolationTime24.first)
+			cass_statement_bind_int64(statement.get(), 4, insolationTime24.second);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
 		bool ret = true;
-
-		CassFuture* query;
-		{ /* mutex scope */
-			std::lock_guard<std::mutex> queryMutex{_insertMutex};
-			std::cerr << "About to insert entire day values in database" << std::endl;
-			CassStatement* statement = cass_prepared_bind(_insertEntireDayValuesInNewDB.get());
-			cass_statement_bind_uuid(statement, 0, station);
-			cass_statement_bind_uint32(statement, 1, cass_date_from_epoch(time));
-			cass_statement_bind_int64(statement, 2, time * 1000);
-			if (rainfall24.first)
-				cass_statement_bind_float(statement, 3, rainfall24.second);
-			if (insolationTime24.first)
-				cass_statement_bind_int64(statement, 4, insolationTime24.second);
-			query = cass_session_execute(_session.get(), statement);
-			cass_statement_free(statement);
-		}
-
-		const CassResult* result = cass_future_get_result(query);
 		if (!result) {
 			const char* error_message;
 			size_t error_message_length;
-			cass_future_error_message(query, &error_message, &error_message_length);
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
 			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
 
 	bool DbConnectionObservations::insertMonitoringDataPoint(const CassUuid station, const Message& msg)
 	{
+		std::cerr << "About to insert reconstructed data point in database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertDataPointInMonitoringDB.get()),
+			cass_statement_free
+		};
+		msg.populateV2DataPoint(station, statement.get());
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
 		bool ret = true;
-
-		CassFuture* query;
-		{ /* mutex scope */
-			std::lock_guard<std::mutex> queryMutex{_insertMutex};
-			std::cerr << "About to insert reconstructed data point in database" << std::endl;
-			CassStatement* statement = cass_prepared_bind(_insertDataPointInMonitoringDB.get());
-			msg.populateV2DataPoint(station, statement);
-			query = cass_session_execute(_session.get(), statement);
-			cass_statement_free(statement);
-		}
-
-		const CassResult* result = cass_future_get_result(query);
 		if (!result) {
 			const char* error_message;
 			size_t error_message_length;
-			cass_future_error_message(query, &error_message, &error_message_length);
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
 			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
 
 	bool DbConnectionObservations::updateLastArchiveDownloadTime(const CassUuid station, const time_t& time)
 	{
-		CassFuture* query;
-		{ /* mutex scope */
-			std::lock_guard<std::mutex> queryMutex{_updateLastArchiveDownloadMutex};
-			std::cerr << "About to update an archive download time in database" << std::endl;
-			CassStatement* statement = cass_prepared_bind(_updateLastArchiveDownloadTime.get());
-			cass_statement_bind_int64(statement, 0, time * 1000);
-			cass_statement_bind_uuid(statement, 1, station);
-			query = cass_session_execute(_session.get(), statement);
-			cass_statement_free(statement);
-		}
+		std::cerr << "About to update an archive download time in database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_updateLastArchiveDownloadTime.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_int64(statement.get(), 0, time * 1000);
+		cass_statement_bind_uuid(statement.get(), 1, station);
 
-		const CassResult* result = cass_future_get_result(query);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
 		bool ret = true;
 		if (!result) {
 			const char* error_message;
 			size_t error_message_length;
-			cass_future_error_message(query, &error_message, &error_message_length);
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
 			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}
@@ -680,12 +697,14 @@ namespace meteodata {
 			cass_session_execute(_session.get(), statement.get()),
 			cass_future_free
 		};
-
-		const CassResult* result = cass_future_get_result(query.get());
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
 		bool ret = false;
 		if (result) {
 			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result),
+				cass_iterator_from_result(result.get()),
 				cass_iterator_free
 			};
 			while (cass_iterator_next(iterator.get())) {
@@ -723,12 +742,14 @@ namespace meteodata {
 			cass_session_execute(_session.get(), statement.get()),
 			cass_future_free
 		};
-
-		const CassResult* result = cass_future_get_result(query.get());
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
 		bool ret = false;
 		if (result) {
 			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result),
+				cass_iterator_from_result(result.get()),
 				cass_iterator_free
 			};
 			while (cass_iterator_next(iterator.get())) {
@@ -749,30 +770,33 @@ namespace meteodata {
 
 	bool DbConnectionObservations::deleteDataPoints(const CassUuid& station, const date::sys_days& day, const date::sys_seconds& start, const date::sys_seconds& end)
 	{
-		CassFuture* query;
-		{ /* mutex scope */
-			std::lock_guard<std::mutex> queryMutex{_deleteDataPointsMutex};
-			std::cerr << "About to delete records from the database" << std::endl;
-			CassStatement* statement = cass_prepared_bind(_deleteDataPoints.get());
-			cass_statement_bind_uuid(statement, 0, station);
-			cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(day));
-			cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(start));
-			cass_statement_bind_int64(statement, 3, from_systime_to_CassandraDateTime(end));
-			query = cass_session_execute(_session.get(), statement);
-			cass_statement_free(statement);
-		}
+		std::cerr << "About to delete records from the database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_deleteDataPoints.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_uint32(statement.get(), 1, from_sysdays_to_CassandraDate(day));
+		cass_statement_bind_int64(statement.get(), 2, from_systime_to_CassandraDateTime(start));
+		cass_statement_bind_int64(statement.get(), 3, from_systime_to_CassandraDateTime(end));
 
-		const CassResult* result = cass_future_get_result(query);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
 		bool ret = true;
 		if (!result) {
 			const char* error_message;
 			size_t error_message_length;
-			cass_future_error_message(query, &error_message, &error_message_length);
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
 			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
-		cass_result_free(result);
-		cass_future_free(query);
 
 		return ret;
 	}

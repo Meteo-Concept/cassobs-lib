@@ -29,7 +29,6 @@
 #include <functional>
 #include <tuple>
 #include <memory>
-#include <mutex>
 #include <tuple>
 #include <vector>
 #include <string>
@@ -302,22 +301,6 @@ namespace meteodata {
 		 * method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _deleteDataPoints;
-		/**
-		 * @brief A mutual exclusion semaphore to protect _insertDataPoint
-		 */
-		std::mutex _insertMutex;
-		/**
-		 * @brief A mutual exclusion semaphore to protect _selectStationByCoords
-		 */
-		std::mutex _selectMutex;
-		/**
-		 * @brief A mutual exclusion semaphore to protect _updateLastArchiveDownloadTime
-		 */
-		std::mutex _updateLastArchiveDownloadMutex;
-		/**
-		 * @brief A mutual exclusion semaphore to protect _deleteDataPoints
-		 */
-		std::mutex _deleteDataPointsMutex;
 		/**
 		 * @brief Prepare the Cassandra query/insert statements
 		 */

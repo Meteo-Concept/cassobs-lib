@@ -55,6 +55,20 @@ class DbConnectionCommon
 
 
 		bool getAllStations(std::vector<CassUuid>& stations);
+		/**
+		 * @brief Get the name of a station and its polling period
+		 *
+		 * @param uuid The station identifier
+		 * @param[out] name Where to store the name of the station
+		 * @param[out] pollPeriod Where to store the polling period of the
+		 * station (the amount of time which should separate two
+		 * measurements)
+		 * @param[out] lastArchiveDownloadTime The timestamp of the
+		 * last archive entry downloaded from the database
+		 *
+		 * @return True if, and only if, all went well
+		 */
+		bool getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime);
 		bool getWindValues(const CassUuid& station, const date::sys_days& date, std::vector<std::pair<int,float>>& values);
 
 	protected:
@@ -223,6 +237,15 @@ class DbConnectionCommon
 		 * @brief The second prepared statement for the getAllStations() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectAllStationsFr;
+		/**
+		 * @brief The raw query string to select the individual details of a station from the database
+		 */
+		static constexpr char SELECT_STATION_DETAILS_STMT[] = "SELECT name,polling_period,last_archive_download FROM meteodata.stations WHERE id = ?";
+		/**
+		 * @brief The prepared statement for the getStationDetails()
+		 * method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationDetails;
 		/**
 		 * @brief The raw query string to select all wind observations for a given station on a given day
 		 */

@@ -175,21 +175,6 @@ namespace meteodata {
 		 * false otherwise.
 		 */
 		bool updateLastArchiveDownloadTime(const CassUuid station, const time_t& time);
-
-		/**
-		 * @brief Get the name of a station and its polling period
-		 *
-		 * @param uuid The station identifier
-		 * @param[out] name Where to store the name of the station
-		 * @param[out] pollPeriod Where to store the polling period of the
-		 * station (the amount of time which should separate two
-		 * measurements)
-		 * @param[out] lastArchiveDownloadTime The timestamp of the
-		 * last archive entry downloaded from the database
-		 *
-		 * @return True if, and only if, all went well
-		 */
-		bool getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime);
 		/**
 		 * @brief Identify the last time data was retrieved from a
 		 * station
@@ -247,15 +232,10 @@ namespace meteodata {
 
 	private:
 		/**
-		 * @brief The first prepared statement for the getStationByCoords()
+		 * @brief The prepared statement for the getStationByCoords()
 		 * method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationByCoords;
-		/**
-		 * @brief The second prepared statement for the getStationByCoords()
-		 * method
-		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationDetails;
 		/**
 		 * @brief The prepared statement for the getAllIcaos()
 		 * method

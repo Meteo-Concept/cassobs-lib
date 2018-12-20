@@ -48,6 +48,7 @@ DbConnectionCommon::DbConnectionCommon(const std::string& address, const std::st
 	_cluster{cass_cluster_new(), cass_cluster_free},
 	_selectAllStations{nullptr, cass_prepared_free},
 	_selectAllStationsFr{nullptr, cass_prepared_free},
+	_selectStationDetails{nullptr, &cass_prepared_free},
 	_selectWindValues{nullptr, cass_prepared_free}
 {
 	cass_cluster_set_contact_points(_cluster.get(), address.c_str());
@@ -85,6 +86,16 @@ void DbConnectionCommon::prepareStatements()
 		throw std::runtime_error(desc);
 	}
 	_selectAllStationsFr.reset(cass_future_get_prepared(prepareFuture));
+	cass_future_free(prepareFuture);
+
+	prepareFuture = cass_session_prepare(_session.get(), SELECT_STATION_DETAILS_STMT);
+	rc = cass_future_error_code(prepareFuture);
+	if (rc != CASS_OK) {
+		std::string desc("Could not prepare statement selectStationDetails: ");
+		desc.append(cass_error_desc(rc));
+		throw std::runtime_error(desc);
+	}
+	_selectStationDetails.reset(cass_future_get_prepared(prepareFuture));
 	cass_future_free(prepareFuture);
 
 	prepareFuture = cass_session_prepare(_session.get(), SELECT_WIND_VALUES_STMT);
@@ -147,6 +158,43 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 	}
 	cass_result_free(result);
 	cass_future_free(query);
+
+	return ret;
+}
+
+bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
+{
+	std::cerr << "About to execute statement getStationDetails" << std::endl;
+	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+		cass_prepared_bind(_selectStationDetails.get()),
+		cass_statement_free
+	};
+	cass_statement_bind_uuid(statement.get(), 0, uuid);
+	std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+		cass_session_execute(_session.get(), statement.get()),
+		cass_future_free
+	};
+	std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+		cass_future_get_result(query.get()),
+		cass_result_free
+	};
+
+	bool ret = false;
+	if (result) {
+		const CassRow* row = cass_result_first_row(result.get());
+		if (row) {
+			const char *stationName;
+			size_t size;
+			cass_value_get_string(cass_row_get_column(row,0), &stationName, &size);
+			cass_value_get_int32(cass_row_get_column(row,1), &pollPeriod);
+			cass_int64_t timeMillisec;
+			cass_value_get_int64(cass_row_get_column(row,2), &timeMillisec);
+			lastArchiveDownloadTime = timeMillisec/1000;
+			name.clear();
+			name.insert(0, stationName, size);
+			ret = true;
+		}
+	}
 
 	return ret;
 }

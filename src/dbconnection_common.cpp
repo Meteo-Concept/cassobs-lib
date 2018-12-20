@@ -40,6 +40,7 @@ namespace meteodata {
 constexpr char DbConnectionCommon::SELECT_ALL_STATIONS_STMT[];
 constexpr char DbConnectionCommon::SELECT_ALL_STATIONS_FR_STMT[];
 constexpr char DbConnectionCommon::SELECT_WIND_VALUES_STMT[];
+constexpr char DbConnectionCommon::SELECT_STATION_DETAILS_STMT[];
 
 namespace chrono = std::chrono;
 

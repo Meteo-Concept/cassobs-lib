@@ -557,7 +557,7 @@ namespace meteodata {
 		if (rainfall24.first)
 			cass_statement_bind_float(statement.get(), 3, rainfall24.second);
 		if (insolationTime24.first)
-			cass_statement_bind_int64(statement.get(), 4, insolationTime24.second);
+			cass_statement_bind_int32(statement.get(), 4, insolationTime24.second);
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 			cass_session_execute(_session.get(), statement.get()),
 			cass_future_free

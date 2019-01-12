@@ -216,6 +216,22 @@ namespace meteodata {
 		bool getAllWeatherlinkStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations);
 
 		/**
+		 * @brief Get MQTT subscription details for all the stations that send their
+		 * data via MQTT
+		 *
+		 * Each station is associated to a tuple (UUID, host, port, user, password, password_length, topic, tz)
+		 * where 'UUID' is the identifier of the station, 'host' the IP or domain name to connect to, 'port',
+		 * the coresponding port number, 'user', the user name to use, 'password', the corresponding password
+		 * for the user, 'password_length', the length of the password, 'topic', the name of the topic on which
+		 * the station publishes archive messages, 'tz', the timezone used by the station.
+		 *
+		 * @param[out] stations A vector of tuple (UUID, host, port, user, password, password_length, topic)
+		 *
+		 * @return True if everything went well, false if an error occurred
+		 */
+		bool getMqttStations(std::vector<std::tuple<CassUuid, std::string, int, std::string, std::unique_ptr<char[]>, size_t, std::string, int>>& stations);
+
+		/**
 		 * @brief Remove all data points for a given station and time range
 		 *
 		 * The time range cannot exceed the boundaries of a single day, chop
@@ -276,6 +292,11 @@ namespace meteodata {
 		 * getWeatherlinkStations() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectWeatherlinkStations;
+		/**
+		 * @brief The prepared statement for the
+		 * getMqttStations() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectMqttStations;
 		/**
 		 * @brief The prepared statement for the deleteDataPoints()
 		 * method

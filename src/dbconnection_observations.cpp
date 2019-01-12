@@ -25,6 +25,8 @@
 #include <exception>
 #include <vector>
 #include <utility>
+#include <memory>
+#include <cstring>
 
 #include <cassandra.h>
 #include <syslog.h>
@@ -47,6 +49,7 @@ namespace meteodata {
 		_insertDataPointInMonitoringDB{nullptr, &cass_prepared_free},
 		_updateLastArchiveDownloadTime{nullptr, &cass_prepared_free},
 		_selectWeatherlinkStations{nullptr, &cass_prepared_free},
+		_selectMqttStations{nullptr, &cass_prepared_free},
 		_deleteDataPoints{nullptr, &cass_prepared_free}
 	{
 		prepareStatements();
@@ -335,6 +338,16 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_selectWeatherlinkStations.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, port, user, password, topic FROM meteodata.mqtt");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectMqttStations: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectMqttStations.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(), "DELETE FROM meteodata_v2.meteo WHERE station=? AND day=? AND time>? AND time<=?");
@@ -677,6 +690,56 @@ namespace meteodata {
 				int timezone;
 				cass_value_get_int32(cass_row_get_column(row,3), &timezone);
 				stations.emplace_back(station, std::string{authString, sizeAuthString}, apiToken, timezone);
+			}
+			ret = true;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getMqttStations(std::vector<std::tuple<CassUuid, std::string, int, std::string, std::unique_ptr<char[]>, size_t, std::string, int>>& stations)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectMqttStations.get()),
+			cass_statement_free
+		};
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+		bool ret = false;
+		if (result) {
+			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+				cass_iterator_from_result(result.get()),
+				cass_iterator_free
+			};
+			while (cass_iterator_next(iterator.get())) {
+				const CassRow* row = cass_iterator_get_row(iterator.get());
+				CassUuid station;
+				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				const char *host;
+				size_t sizeHost;
+				cass_value_get_string(cass_row_get_column(row,1), &host, &sizeHost);
+				int port;
+				cass_value_get_int32(cass_row_get_column(row,2), &port);
+				const char *user;
+				size_t sizeUser;
+				cass_value_get_string(cass_row_get_column(row,3), &user, &sizeUser);
+				const char *pw;
+				size_t sizePw;
+				cass_value_get_string(cass_row_get_column(row,4), &pw, &sizePw);
+				std::unique_ptr<char[]> pwCopy = std::make_unique<char[]>(sizePw+1);
+				std::strncpy(pwCopy.get(), pw, sizePw);
+				const char *topic;
+				size_t sizeTopic;
+				cass_value_get_string(cass_row_get_column(row,5), &topic, &sizeTopic);
+				int tz;
+				cass_value_get_int32(cass_row_get_column(row,6), &tz);
+				stations.emplace_back(station, std::string{host, sizeHost}, port, std::string{user, sizeUser}, std::move(pwCopy), sizePw, std::string{topic, sizeTopic}, tz);
 			}
 			ret = true;
 		}

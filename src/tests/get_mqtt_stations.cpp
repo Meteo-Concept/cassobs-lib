@@ -71,7 +71,8 @@ int main()
 			<< "\tport " << std::get<2>(s) << "\n"
 			<< "\tuser " << std::get<3>(s) << "\n"
 			<< "\tpassword " << std::get<4>(s).get() << "\n"
-			<< "\ttopic " << std::get<5>(s) << "\n"
-			<< "\ttz " << std::get<6>(s) << std::endl;
+			<< "\tpassword length" << std::get<5>(s) << "\n"
+			<< "\ttopic " << std::get<6>(s) << "\n"
+			<< "\ttz " << std::get<7>(s) << std::endl;
 	}
 }

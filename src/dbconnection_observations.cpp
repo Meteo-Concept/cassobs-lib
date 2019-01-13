@@ -340,7 +340,7 @@ namespace meteodata {
 		_selectWeatherlinkStations.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, port, user, password, topic FROM meteodata.mqtt");
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, port, user, password, topic, tz FROM meteodata.mqtt");
 		rc = cass_future_error_code(prepareFuture);
 		if (rc != CASS_OK) {
 			std::string desc("Could not prepare statement selectMqttStations: ");

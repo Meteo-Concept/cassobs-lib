@@ -109,6 +109,7 @@ bool DbConnectionMonthMinmax::getDailyValues(const CassUuid& uuid, int year, int
 			storeCassandraInt(row, param++, values.solarRad_max);
 			storeCassandraInt(row, param++, values.solarRad_avg);
 			storeCassandraInt(row, param++, values.uv_max);
+			storeCassandraInt(row, param++, values.insolationTime);
 			ret = true;
 		}
 	}
@@ -147,6 +148,7 @@ bool DbConnectionMonthMinmax::insertDataPoint(const CassUuid& station, int year,
 	bindCassandraInt(statement, param++, values.uv_max);
 	bindCassandraList(statement, param++, values.winddir);
 	bindCassandraFloat(statement, param++, values.windgust_max);
+	bindCassandraInt(statement, param++, values.insolationTime);
 	query = cass_session_execute(_session.get(), statement);
 	cass_statement_free(statement);
 

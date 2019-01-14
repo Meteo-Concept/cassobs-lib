@@ -81,6 +81,7 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			std::pair<bool, int> outsideHum_max;
 			std::pair<bool, int> solarRad_max;
 			std::pair<bool, int> solarRad_avg;
+			std::pair<bool, int> insolationTime;
 			std::pair<bool, int> uv_max;
 			std::pair<bool, float> windgust_max;
 			std::pair<bool, std::vector<int>> winddir;
@@ -157,7 +158,8 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"MAX(outsidehum_max)		AS outsidehum_max, "
 			"MAX(solarrad_max)		AS solarrad_max, "
 			"meteodata_v2.avg(solarrad_avg)	AS solarrad_avg, "
-			"MAX(uv_max)			AS uv_max "
+			"MAX(uv_max)			AS uv_max, "
+			"SUM(insolation_time)		AS insolation_time "
 			" FROM meteodata_v2.minmax WHERE station = ? AND monthyear = ?";
 			//" FROM meteodata.minmax WHERE station = ? AND date >= ? AND date < ?";
 		/**
@@ -188,8 +190,10 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"solarrad_max,"
 			"uv_max,"
 			"winddir,"
-			"windgust_speed_max)"
+			"windgust_speed_max,"
+			"insolation_time)"
 			" VALUES ("
+			"?,"
 			"?,"
 			"?,"
 			"?,"

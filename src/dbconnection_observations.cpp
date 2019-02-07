@@ -50,6 +50,7 @@ namespace meteodata {
 		_updateLastArchiveDownloadTime{nullptr, &cass_prepared_free},
 		_selectWeatherlinkStations{nullptr, &cass_prepared_free},
 		_selectMqttStations{nullptr, &cass_prepared_free},
+		_selectStatICTxtStations{nullptr, &cass_prepared_free},
 		_deleteDataPoints{nullptr, &cass_prepared_free}
 	{
 		prepareStatements();
@@ -348,6 +349,16 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_selectMqttStations.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, url FROM meteodata.statictxt");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectStatICTxtStations: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectStatICTxtStations.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(), "DELETE FROM meteodata_v2.meteo WHERE station=? AND day=? AND time>? AND time<=?");
@@ -740,6 +751,44 @@ namespace meteodata {
 				int tz;
 				cass_value_get_int32(cass_row_get_column(row,6), &tz);
 				stations.emplace_back(station, std::string{host, sizeHost}, port, std::string{user, sizeUser}, std::move(pwCopy), sizePw, std::string{topic, sizeTopic}, tz);
+			}
+			ret = true;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string>>& stations)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectStatICTxtStations.get()),
+			cass_statement_free
+		};
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+		bool ret = false;
+		if (result) {
+			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+				cass_iterator_from_result(result.get()),
+				cass_iterator_free
+			};
+			while (cass_iterator_next(iterator.get())) {
+				const CassRow* row = cass_iterator_get_row(iterator.get());
+				CassUuid station;
+				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				const char *host;
+				size_t sizeHost;
+				cass_value_get_string(cass_row_get_column(row,1), &host, &sizeHost);
+				const char *url;
+				size_t sizeUrl;
+				cass_value_get_string(cass_row_get_column(row,2), &url, &sizeUrl);
+				stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl});
 			}
 			ret = true;
 		}

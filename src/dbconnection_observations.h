@@ -100,6 +100,15 @@ namespace meteodata {
 		 * @return The boolean value true if everything went well, false if an error occurred
 		 */
 		bool getAllIcaos(std::vector<std::tuple<CassUuid, std::string>>& synopStations);
+		/**
+		 * @brief Fetch the list of SYNOPs that are not available in realtime and must be
+		 * downloaded every 24 hours or so
+		 *
+		 * @param[out] stations The so-called "deferred SYNOPs" as tuples (UUID, ICAO)
+		 *
+		 * @return True if everything went well, false if the query failed
+		 */
+		bool getDeferredSynops(std::vector<std::tuple<CassUuid, std::string>>& stations);
 
 		/**
 		 * @brief Insert a new data point in the database
@@ -288,6 +297,10 @@ namespace meteodata {
 		 * method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectAllIcaos;
+		/**
+		 * @brief The prepared statement for the getDeferredSynops() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectDeferredSynops;
 		/**
 		 * @brief The prepared statement for the getLastInsertionTime()
 		 * method

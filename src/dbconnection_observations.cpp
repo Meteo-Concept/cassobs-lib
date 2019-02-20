@@ -42,6 +42,7 @@ namespace meteodata {
 		_selectStationByCoords{nullptr, &cass_prepared_free},
 		_selectStationCoordinates{nullptr, &cass_prepared_free},
 		_selectAllIcaos{nullptr, &cass_prepared_free},
+		_selectDeferredSynops{nullptr, &cass_prepared_free},
 		_selectLastDataInsertionTime{nullptr, &cass_prepared_free},
 		_selectLastDataBefore{nullptr, &cass_prepared_free},
 		_insertDataPoint{nullptr, &cass_prepared_free},
@@ -87,6 +88,16 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_selectAllIcaos.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT uuid,icao FROM meteodata.deferred_synops");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectDeferredSynops: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectDeferredSynops.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(), "SELECT time FROM meteodata.meteo WHERE station = ? LIMIT 1");
@@ -871,6 +882,41 @@ namespace meteodata {
 				cass_value_get_string(cass_row_get_column(row,1), &icaoStr, &icaoLength);
 				if (icaoLength != 0)
 					stations.emplace_back(station, std::string{icaoStr, icaoLength});
+			}
+			ret = true;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getDeferredSynops(std::vector<std::tuple<CassUuid, std::string>>& stations)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectDeferredSynops.get()),
+			cass_statement_free
+		};
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+		bool ret = false;
+		if (result) {
+			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+				cass_iterator_from_result(result.get()),
+				cass_iterator_free
+			};
+			while (cass_iterator_next(iterator.get())) {
+				const CassRow* row = cass_iterator_get_row(iterator.get());
+				CassUuid station;
+				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				const char *icaoStr;
+				size_t icaoLength;
+				cass_value_get_string(cass_row_get_column(row,1), &icaoStr, &icaoLength);
+				stations.emplace_back(station, std::string{icaoStr, icaoLength});
 			}
 			ret = true;
 		}

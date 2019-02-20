@@ -40,6 +40,7 @@ namespace meteodata {
 	DbConnectionObservations::DbConnectionObservations(const std::string& address, const std::string& user, const std::string& password) :
 		DbConnectionCommon(address, user, password),
 		_selectStationByCoords{nullptr, &cass_prepared_free},
+		_selectStationCoordinates{nullptr, &cass_prepared_free},
 		_selectAllIcaos{nullptr, &cass_prepared_free},
 		_selectLastDataInsertionTime{nullptr, &cass_prepared_free},
 		_selectLastDataBefore{nullptr, &cass_prepared_free},
@@ -66,6 +67,16 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_selectStationByCoords.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT latitude,longitude,elevation,name,polling_period FROM meteodata.stations WHERE id = ?");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectStationCoordinates: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectStationCoordinates.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(), "SELECT id,icao FROM meteodata.stationsFR");
@@ -504,6 +515,41 @@ namespace meteodata {
 				ret = getStationDetails(station, name, pollPeriod, lastArchiveDownloadTime);
 				if (ret)
 					getLastDataInsertionTime(station, lastDataInsertionTime);
+			}
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getStationCoordinates(CassUuid station, float& latitude, float& longitude, int& elevation, std::string& name, int& pollPeriod)
+	{
+		std::cerr << "About to execute statement getStationCoordinates" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectStationCoordinates.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = false;
+		if (result) {
+			const CassRow* row = cass_result_first_row(result.get());
+			if (row) {
+				cass_value_get_float(cass_row_get_column(row,0), &latitude);
+				cass_value_get_float(cass_row_get_column(row,1), &longitude);
+				cass_value_get_int32(cass_row_get_column(row,2), &elevation);
+				const char *nameStr;
+				size_t sizeName;
+				cass_value_get_string(cass_row_get_column(row,3), &nameStr, &sizeName);
+				name.assign(nameStr, sizeName);
+				cass_value_get_int32(cass_row_get_column(row,4), &pollPeriod);
 			}
 		}
 

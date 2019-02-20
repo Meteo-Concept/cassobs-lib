@@ -79,6 +79,20 @@ namespace meteodata {
 		bool getStationByCoords(int latitude, int longitude, int altitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime);
 
 		/**
+		 * @brief Get the coordinates of a station
+		 *
+		 * @param[in] station The station's UUID
+		 * @param[out] latitude The latitude of the station
+		 * @param[out] longitude The longitude of the station
+		 * @param[out] altitude The elevation of the station
+		 * @param[out] name The common name given to the station
+		 * @param[out] pollPeriod The period of time between two measurements from the station
+		 *
+		 * @return The boolean value true if everything went well, false if an error occurred
+		 */
+		bool getStationCoordinates(CassUuid station, float& latitude, float& longitude, int& altitude, std::string& name, int& pollPeriod);
+
+		/**
 		 * @brief Get all the ICAOs (international meteorological stations identifier) with their UUID correspondance
 		 *
 		 * @param[out] synopStations A vector with a pair (UUID,ICAO) for each MétéoFrance SYNOP station
@@ -264,6 +278,11 @@ namespace meteodata {
 		 * method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationByCoords;
+		/**
+		 * @brief The prepared statement for the getStationCoordinates()
+		 * method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationCoordinates;
 		/**
 		 * @brief The prepared statement for the getAllIcaos()
 		 * method

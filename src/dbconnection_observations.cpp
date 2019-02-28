@@ -48,12 +48,16 @@ namespace meteodata {
 		_insertDataPoint{nullptr, &cass_prepared_free},
 		_insertDataPointInNewDB{nullptr, &cass_prepared_free},
 		_insertEntireDayValuesInNewDB{nullptr, &cass_prepared_free},
+		_insertTxInNewDB{nullptr, &cass_prepared_free},
+		_insertTnInNewDB{nullptr, &cass_prepared_free},
 		_insertDataPointInMonitoringDB{nullptr, &cass_prepared_free},
 		_updateLastArchiveDownloadTime{nullptr, &cass_prepared_free},
 		_selectWeatherlinkStations{nullptr, &cass_prepared_free},
 		_selectMqttStations{nullptr, &cass_prepared_free},
 		_selectStatICTxtStations{nullptr, &cass_prepared_free},
-		_deleteDataPoints{nullptr, &cass_prepared_free}
+		_deleteDataPoints{nullptr, &cass_prepared_free},
+		_selectTx{nullptr, &cass_prepared_free},
+		_selectTn{nullptr, &cass_prepared_free}
 	{
 		prepareStatements();
 	}
@@ -287,6 +291,44 @@ namespace meteodata {
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(),
+			"INSERT INTO meteodata_v2.meteo ("
+			"station,"
+			"day, time,"
+			"tx) "
+			" VALUES ("
+			"?,"		// "station,"
+			"?, ?,"		// "day, time,"
+			"?)");		// "tx)"
+
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement insertTxInNewDB: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_insertTxInNewDB.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(),
+			"INSERT INTO meteodata_v2.meteo ("
+			"station,"
+			"day, time,"
+			"tn) "
+			" VALUES ("
+			"?,"		// "station,"
+			"?, ?,"		// "day, time,"
+			"?)");		// "tn)"
+
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement insertTnInNewDB: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_insertTnInNewDB.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(),
 			"INSERT INTO meteodata_v2.monitoring_observations ("
 			"station,"
 			"day, time,"
@@ -391,6 +433,26 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_deleteDataPoints.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT tx FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectTx: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectTx.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT tn FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectTn: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectTn.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 	}
 
@@ -639,6 +701,100 @@ namespace meteodata {
 			cass_statement_bind_float(statement.get(), 3, rainfall24.second);
 		if (insolationTime24.first)
 			cass_statement_bind_int32(statement.get(), 4, insolationTime24.second);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = true;
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			std::cerr << "Error from Cassandra: " << error_message << std::endl;
+			ret = false;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::insertV2Tx(const CassUuid station, const time_t& time, float tx)
+	{
+		std::cerr << "About to insert Tx value in database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertTxInNewDB.get()),
+			cass_statement_free
+		};
+
+		std::chrono::system_clock::time_point tp{std::chrono::seconds{time}};
+		auto daypoint = date::floor<date::days>(tp);
+		auto ymd = date::sys_days{date::year_month_day{daypoint}};
+		auto tod = date::make_time(tp - daypoint);
+		if (tod.hours().count() < 6)
+			ymd -= date::days(1);
+		time_t correctedTime = std::chrono::system_clock::to_time_t(ymd);
+
+		std::pair<bool, float> oldTx;
+		if (!getTx(station, time, oldTx))
+			return false;
+		if (tx <= oldTx.second)
+			return true;
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(correctedTime));
+		cass_statement_bind_int64(statement.get(), 2, correctedTime * 1000);
+		cass_statement_bind_float(statement.get(), 3, tx);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = true;
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			std::cerr << "Error from Cassandra: " << error_message << std::endl;
+			ret = false;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::insertV2Tn(const CassUuid station, const time_t& time, float tn)
+	{
+		std::cerr << "About to insert Tx value in database" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertTnInNewDB.get()),
+			cass_statement_free
+		};
+
+		std::chrono::system_clock::time_point tp{std::chrono::seconds{time}};
+		auto daypoint = date::floor<date::days>(tp);
+		auto ymd = date::sys_days{date::year_month_day{daypoint}};
+		auto tod = date::make_time(tp - daypoint);
+		if (tod.hours().count() >= 18)
+			ymd += date::days(1);
+		time_t correctedTime = std::chrono::system_clock::to_time_t(ymd);
+
+		std::pair<bool, float> oldTn;
+		if (!getTn(station, time, oldTn))
+			return false;
+		if (tn >= oldTn.second)
+			return true;
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(correctedTime));
+		cass_statement_bind_int64(statement.get(), 2, correctedTime * 1000);
+		cass_statement_bind_float(statement.get(), 3, tn);
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 			cass_session_execute(_session.get(), statement.get()),
 			cass_future_free
@@ -952,6 +1108,82 @@ namespace meteodata {
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
 			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getTx(const CassUuid& station, time_t boundary, std::pair<bool, float>& value)
+	{
+		std::cerr << "About to execute statement getTx" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectTx.get()),
+			cass_statement_free
+		};
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(boundary));
+		cass_statement_bind_int64(statement.get(), 2, boundary * 1000);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = false;
+		value.first = false;
+		if (result) {
+			const CassRow* row = cass_result_first_row(result.get());
+			if (row) {
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (!cass_value_is_null(v)) {
+					float f;
+					cass_value_get_float(v, &f);
+					value.first = true;
+					value.second = f;
+				}
+			}
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getTn(const CassUuid& station, time_t boundary, std::pair<bool, float>& value)
+	{
+		std::cerr << "About to execute statement getTn" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectTn.get()),
+			cass_statement_free
+		};
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(boundary));
+		cass_statement_bind_int64(statement.get(), 2, boundary * 1000);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = false;
+		value.first = false;
+		if (result) {
+			const CassRow* row = cass_result_first_row(result.get());
+			if (row) {
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (!cass_value_is_null(v)) {
+					float f;
+					cass_value_get_float(v, &f);
+					value.first = true;
+					value.second = f;
+				}
+			}
 		}
 
 		return ret;

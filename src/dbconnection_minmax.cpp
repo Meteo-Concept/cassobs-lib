@@ -397,6 +397,19 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 				values.insolation_time.first = true;
 				cass_value_get_int32(raw, &values.insolation_time.second);
 			}
+
+			// Overwrite Tx and Tn if true values are available
+			raw = cass_row_get_column(row, res++);
+			if (!cass_value_is_null(raw)) {
+				values.outsideTemp_max.first = true;
+				cass_value_get_float(raw, &values.outsideTemp_max.second);
+			}
+			raw = cass_row_get_column(row, res++);
+			if (!cass_value_is_null(raw)) {
+				values.outsideTemp_min.first = true;
+				cass_value_get_float(raw, &values.outsideTemp_min.second);
+			}
+
 			ret = true;
 		}
 	}

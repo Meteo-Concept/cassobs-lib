@@ -250,7 +250,9 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"SUM(et)                      AS et,"
 				"SUM(insolation_time)         AS insolation_time,"
 				"rainfall24                   AS rainfall24,"
-				"insolation_time24            AS insolation_time24 "
+				"insolation_time24            AS insolation_time24,"
+				"tx                           AS tx,"
+				"tn                           AS tn "
 			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
 				" FROM meteodata_v2.meteo WHERE station = ? AND day = ?";
 

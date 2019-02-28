@@ -182,6 +182,50 @@ namespace meteodata {
 		bool insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24);
 
 		/**
+		 * @brief Update the Tx value in the V2 database
+		 *
+		 * This method uses the new database scheme. Only the variable
+		 * Tx corresponding respectively to the max temperature is
+		 * considered in this method. This is necessary when the Tx
+		 * occurs in the middle of a measurement period.
+		 *
+		 * This method is quite costly because it checks that the
+		 * maximum is indeed greater than the value already recorded.
+		 * According to the OMM norms, the Tx is measured between 6h
+		 * UTC and 6h UTC, this method takes care of updating the
+		 * correct day.
+		 *
+		 * @param station The identifier of the station
+		 * @param tx The maximum temperature.
+		 *
+		 * @return True is the measure data point could be succesfully
+		 * inserted, false otherwise
+		 */
+		bool insertV2Tx(const CassUuid station, const time_t& time, float tx);
+
+		/**
+		 * @brief Update the Tn value in the V2 database
+		 *
+		 * This method uses the new database scheme. Only the variable
+		 * Tn corresponding respectively to the max temperature is
+		 * considered in this method. This is necessary when the Tx
+		 * occurs in the middle of a measurement period.
+		 *
+		 * This method is quite costly because it checks that the
+		 * minimum is indeed lower than the value already recorded.
+		 * According to the OMM norms, the Tn is measured between 18h
+		 * UTC and 18h UTC, this method takes care of updating the
+		 * correct day.
+		 *
+		 * @param station The identifier of the station
+		 * @param tn The minimum temperature.
+		 *
+		 * @return True is the measure data point could be succesfully
+		 * inserted, false otherwise
+		 */
+		bool insertV2Tn(const CassUuid station, const time_t& time, float tn);
+
+		/**
 		 * @brief Insert in the database the time of the last archive
 		 * entry downloaded from a station
 		 *
@@ -323,6 +367,14 @@ namespace meteodata {
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertEntireDayValuesInNewDB;
 		/**
+		 * @brief The prepared statement for the insertV2Tx() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertTxInNewDB;
+		/**
+		 * @brief The prepared statement for the insertV2Tn() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertTnInNewDB;
+		/**
 		 * @brief The prepared statement for the insertMonitoringDataPoint() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPointInMonitoringDB;
@@ -355,6 +407,31 @@ namespace meteodata {
 		 * @brief Prepare the Cassandra query/insert statements
 		 */
 		void prepareStatements();
+
+		/**
+		 * @brief Get the max temperature of a day, if recorded in the observations database
+		 *
+		 * @param[out] tx A vector (bool, float), the boolean tells whether the value is available
+		 *
+		 * @return True if everything went well, false if an error occurred.
+		 */
+		bool getTx(const CassUuid& station, time_t boundary, std::pair<bool, float>& value);
+		/**
+		 * @brief Get the min temperature of a day, if recorded in the observations database
+		 *
+		 * @param[out] tn A vector (bool, float), the boolean tells whether the value is available
+		 *
+		 * @return True if everything went well, false if an error occurred.
+		 */
+		bool getTn(const CassUuid& station, time_t boundary, std::pair<bool, float>& value);
+		/**
+		 * @brief The prepared statement for the getTx() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectTx;
+		/**
+		 * @brief The prepared statement for the getTn() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectTn;
 	};
 }
 

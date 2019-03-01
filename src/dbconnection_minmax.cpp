@@ -399,15 +399,26 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 			}
 
 			// Overwrite Tx and Tn if true values are available
+			// Check also that the new value is indeed greater (resp. lower)
+			// than then the computed max (resp. min), in case the station
+			// measures the min-max in a mignight-to-midnight window
 			raw = cass_row_get_column(row, res++);
 			if (!cass_value_is_null(raw)) {
-				values.outsideTemp_max.first = true;
-				cass_value_get_float(raw, &values.outsideTemp_max.second);
+				float newMax;
+				cass_value_get_float(raw, &newMax);
+				if (!values.outsideTemp_max.first || values.outsideTemp_max.second < newMax) {
+					values.outsideTemp_max.first = true;
+					values.outsideTemp_max.second = newMax;
+				}
 			}
 			raw = cass_row_get_column(row, res++);
 			if (!cass_value_is_null(raw)) {
-				values.outsideTemp_min.first = true;
-				cass_value_get_float(raw, &values.outsideTemp_min.second);
+				float newMin;
+				cass_value_get_float(raw, &newMin);
+				if (!values.outsideTemp_min.first || values.outsideTemp_min.second > newMin) {
+					values.outsideTemp_max.first = true;
+					values.outsideTemp_max.second = newMin;
+				}
 			}
 
 			ret = true;

@@ -724,7 +724,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::insertV2Tx(const CassUuid station, const time_t& time, float tx)
 	{
-		std::cerr << "About to insert Tx value in database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_insertTxInNewDB.get()),
 			cass_statement_free
@@ -741,9 +740,10 @@ namespace meteodata {
 		std::pair<bool, float> oldTx;
 		if (!getTx(station, time, oldTx))
 			return false;
-		if (tx <= oldTx.second)
+		if (oldTx.first && tx <= oldTx.second)
 			return true;
 
+		std::cerr << "About to insert Tx value in database" << std::endl;
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(correctedTime));
 		cass_statement_bind_int64(statement.get(), 2, correctedTime * 1000);
@@ -771,7 +771,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::insertV2Tn(const CassUuid station, const time_t& time, float tn)
 	{
-		std::cerr << "About to insert Tx value in database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_insertTnInNewDB.get()),
 			cass_statement_free
@@ -788,9 +787,10 @@ namespace meteodata {
 		std::pair<bool, float> oldTn;
 		if (!getTn(station, time, oldTn))
 			return false;
-		if (tn >= oldTn.second)
+		if (oldTn.first && tn >= oldTn.second)
 			return true;
 
+		std::cerr << "About to insert Tn value in database" << std::endl;
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(correctedTime));
 		cass_statement_bind_int64(statement.get(), 2, correctedTime * 1000);
@@ -1138,6 +1138,7 @@ namespace meteodata {
 		if (result) {
 			const CassRow* row = cass_result_first_row(result.get());
 			if (row) {
+				ret = true;
 				const CassValue* v = cass_row_get_column(row, 0);
 				if (!cass_value_is_null(v)) {
 					float f;
@@ -1176,6 +1177,7 @@ namespace meteodata {
 		if (result) {
 			const CassRow* row = cass_result_first_row(result.get());
 			if (row) {
+				ret = true;
 				const CassValue* v = cass_row_get_column(row, 0);
 				if (!cass_value_is_null(v)) {
 					float f;

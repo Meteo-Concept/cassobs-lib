@@ -309,6 +309,24 @@ namespace meteodata {
 		 * @return True if everything went well, false if an error occurred.
 		 */
 		bool getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string>>& stations);
+		/**
+		 * @brief Get MBData downloadable file location for stations that make their
+		 * observations available in a MBData file on a web server
+		 *
+		 * Each station is associated to a tuple (UUID, host, url, https, tz, type) where
+		 * 'UUID' is the identifier of the station,
+		 * 'host' the domain name of the web server,
+		 * 'url' the URL of the file,
+		 * 'https' whether https must be used,
+		 * 'tz' the timezone code (the same as in the Weatherlink table),
+		 * 'type' the type of the file (not all pieces of software are able to produce
+		 * exactly the same format so there are some discrepancies which must be dealt with).
+		 *
+		 * @param[out] stations A vector of tuples (UUID, host, url, https, tz, type)
+		 *
+		 * @return True if everything went well, false if an error occurred.
+		 */
+		bool getMBDataTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int, std::string>>& stations);
 
 		/**
 		 * @brief Remove all data points for a given station and time range
@@ -398,6 +416,11 @@ namespace meteodata {
 		 * getStatICTxtStations() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStatICTxtStations;
+		/**
+		 * @brief The prepared statement for the
+		 * getMBDataTxtStations() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectMBDataTxtStations;
 		/**
 		 * @brief The prepared statement for the deleteDataPoints()
 		 * method

@@ -55,6 +55,7 @@ namespace meteodata {
 		_selectWeatherlinkStations{nullptr, &cass_prepared_free},
 		_selectMqttStations{nullptr, &cass_prepared_free},
 		_selectStatICTxtStations{nullptr, &cass_prepared_free},
+		_selectMBDataTxtStations{nullptr, &cass_prepared_free},
 		_deleteDataPoints{nullptr, &cass_prepared_free},
 		_selectTx{nullptr, &cass_prepared_free},
 		_selectTn{nullptr, &cass_prepared_free}
@@ -423,6 +424,16 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_selectStatICTxtStations.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, url, https, tz, type FROM meteodata.mbdatatxt");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement selectMBDataTxtStations: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_selectMBDataTxtStations.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(), "DELETE FROM meteodata_v2.meteo WHERE station=? AND day=? AND time>? AND time<=?");
@@ -1002,6 +1013,51 @@ namespace meteodata {
 				size_t sizeUrl;
 				cass_value_get_string(cass_row_get_column(row,2), &url, &sizeUrl);
 				stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl});
+			}
+			ret = true;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getMBDataTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int, std::string>>& stations)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectMBDataTxtStations.get()),
+			cass_statement_free
+		};
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+		bool ret = false;
+		if (result) {
+			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+				cass_iterator_from_result(result.get()),
+				cass_iterator_free
+			};
+			while (cass_iterator_next(iterator.get())) {
+				const CassRow* row = cass_iterator_get_row(iterator.get());
+				CassUuid station;
+				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				const char* host;
+				size_t sizeHost;
+				cass_value_get_string(cass_row_get_column(row,1), &host, &sizeHost);
+				const char* url;
+				size_t sizeUrl;
+				cass_value_get_string(cass_row_get_column(row,2), &url, &sizeUrl);
+				cass_bool_t https;
+				cass_value_get_bool(cass_row_get_column(row,3), &https);
+				int tz;
+				cass_value_get_int32(cass_row_get_column(row,4), &tz);
+				const char* type;
+				size_t sizeType;
+				cass_value_get_string(cass_row_get_column(row,5), &type, &sizeType);
+				stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz, std::string{type, sizeType});
 			}
 			ret = true;
 		}

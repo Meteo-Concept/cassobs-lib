@@ -16,6 +16,7 @@ libcassobs_la_SOURCES = \
 		    dbconnection_minmax.h\
 		    dbconnection_month_minmax.cpp\
 		    dbconnection_month_minmax.h\
+		    cassandra_stmt_ptr.h\
 		    observation.h \
 		    observation.cpp \
 		    message.h

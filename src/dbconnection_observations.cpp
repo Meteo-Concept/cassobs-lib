@@ -56,6 +56,7 @@ namespace meteodata {
 		_selectMqttStations{nullptr, &cass_prepared_free},
 		_selectStatICTxtStations{nullptr, &cass_prepared_free},
 		_selectMBDataTxtStations{nullptr, &cass_prepared_free},
+		_getRainfall{nullptr, &cass_prepared_free},
 		_deleteDataPoints{nullptr, &cass_prepared_free},
 		_selectTx{nullptr, &cass_prepared_free},
 		_selectTn{nullptr, &cass_prepared_free}
@@ -434,6 +435,16 @@ namespace meteodata {
 			throw std::runtime_error(desc);
 		}
 		_selectMBDataTxtStations.reset(cass_future_get_prepared(prepareFuture));
+		cass_future_free(prepareFuture);
+
+		prepareFuture = cass_session_prepare(_session.get(), "SELECT SUM(rainfall) FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time >= ? AND time < ?");
+		rc = cass_future_error_code(prepareFuture);
+		if (rc != CASS_OK) {
+			std::string desc("Could not prepare statement getRainfall: ");
+			desc.append(cass_error_desc(rc));
+			throw std::runtime_error(desc);
+		}
+		_getRainfall.reset(cass_future_get_prepared(prepareFuture));
 		cass_future_free(prepareFuture);
 
 		prepareFuture = cass_session_prepare(_session.get(), "DELETE FROM meteodata_v2.meteo WHERE station=? AND day=? AND time>? AND time<=?");
@@ -1131,6 +1142,54 @@ namespace meteodata {
 				stations.emplace_back(station, std::string{icaoStr, icaoLength});
 			}
 			ret = true;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getRainfall(const CassUuid& station, time_t begin, time_t end, float& rainfall)
+	{
+		std::cerr << "About to execute statement getRainfall" << std::endl;
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_getRainfall.get()),
+			cass_statement_free
+		};
+
+		date::sys_seconds date{chrono::seconds(begin)};
+		date::sys_seconds final{chrono::seconds(end)};
+		bool ret = true;
+		rainfall = 0;
+		while (date < final && ret) {
+			cass_statement_bind_uuid(statement.get(), 0, station);
+			cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(chrono::system_clock::to_time_t(date)));
+			cass_statement_bind_int64(statement.get(), 2, begin * 1000);
+			cass_statement_bind_int64(statement.get(), 3, end * 1000);
+			std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+				cass_session_execute(_session.get(), statement.get()),
+				cass_future_free
+			};
+			std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+				cass_future_get_result(query.get()),
+				cass_result_free
+			};
+
+			// TODO check if that works
+
+			if (result) {
+				const CassRow* row = cass_result_first_row(result.get());
+				if (row) {
+					const CassValue* value = cass_row_get_column(row, 0);
+					if (!cass_value_is_null(value)) {
+						float f;
+						cass_value_get_float(value, &f);
+						rainfall += f;
+					}
+				}
+			} else {
+				ret = false;
+			}
+
+			date += date::days(1);
 		}
 
 		return ret;

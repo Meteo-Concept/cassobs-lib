@@ -327,6 +327,17 @@ namespace meteodata {
 		 * @return True if everything went well, false if an error occurred.
 		 */
 		bool getMBDataTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int, std::string>>& stations);
+		/**
+		 * @brief Get the total rainfall between two datetimes for a station
+		 *
+		 * @param[in] station The station UUID
+		 * @param[in] begin The start of the time range
+		 * @param[in] end The end of the time range
+		 * @param[out] rainfall The rainfall at the station during the time range
+		 *
+		 * @return True if everything went well, false if an error occurred.
+		 */
+		bool getRainfall(const CassUuid& station, time_t begin, time_t end, float& rainfall);
 
 		/**
 		 * @brief Remove all data points for a given station and time range
@@ -421,6 +432,10 @@ namespace meteodata {
 		 * getMBDataTxtStations() method
 		 */
 		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectMBDataTxtStations;
+		/**
+		 * @brief The prepared statement for the getRainfall() method
+		 */
+		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _getRainfall;
 		/**
 		 * @brief The prepared statement for the deleteDataPoints()
 		 * method

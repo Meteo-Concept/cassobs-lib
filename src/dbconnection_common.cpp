@@ -46,11 +46,7 @@ namespace chrono = std::chrono;
 
 DbConnectionCommon::DbConnectionCommon(const std::string& address, const std::string& user, const std::string& password) :
 	_session{cass_session_new(), cass_session_free},
-	_cluster{cass_cluster_new(), cass_cluster_free},
-	_selectAllStations{nullptr, cass_prepared_free},
-	_selectAllStationsFr{nullptr, cass_prepared_free},
-	_selectStationDetails{nullptr, &cass_prepared_free},
-	_selectWindValues{nullptr, cass_prepared_free}
+	_cluster{cass_cluster_new(), cass_cluster_free}
 {
 	cass_cluster_set_contact_points(_cluster.get(), address.c_str());
 	if (!user.empty() && !password.empty())
@@ -67,47 +63,25 @@ DbConnectionCommon::DbConnectionCommon(const std::string& address, const std::st
 	}
 }
 
-void DbConnectionCommon::prepareStatements()
+void DbConnectionCommon::prepareOneStatement(CassandraStmtPtr& stmt, const std::string& query)
 {
-	CassFuture* prepareFuture = cass_session_prepare(_session.get(), SELECT_ALL_STATIONS_STMT);
+	CassFuture* prepareFuture = cass_session_prepare(_session.get(), query.c_str());
 	CassError rc = cass_future_error_code(prepareFuture);
 	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement selectAllStations: ");
+		std::string desc("Could not prepare statement: ");
 		desc.append(cass_error_desc(rc));
 		throw std::runtime_error(desc);
 	}
-	_selectAllStations.reset(cass_future_get_prepared(prepareFuture));
+	stmt.reset(cass_future_get_prepared(prepareFuture));
 	cass_future_free(prepareFuture);
+}
 
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_ALL_STATIONS_FR_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement selectAllStationsFr: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectAllStationsFr.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_STATION_DETAILS_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement selectStationDetails: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectStationDetails.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_WIND_VALUES_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement selectWindValues: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectWindValues.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
+void DbConnectionCommon::prepareStatements()
+{
+	prepareOneStatement(_selectAllStations, SELECT_ALL_STATIONS_STMT);
+	prepareOneStatement(_selectAllStationsFr, SELECT_ALL_STATIONS_FR_STMT);
+	prepareOneStatement(_selectStationDetails, SELECT_STATION_DETAILS_STMT);
+	prepareOneStatement(_selectWindValues, SELECT_WIND_VALUES_STMT);
 }
 
 bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)

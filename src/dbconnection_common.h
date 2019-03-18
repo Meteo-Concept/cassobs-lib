@@ -34,6 +34,8 @@
 #include <cassandra.h>
 #include <date.h>
 
+#include "cassandra_stmt_ptr.h"
+
 namespace meteodata {
 
 namespace chrono = std::chrono;
@@ -220,6 +222,14 @@ class DbConnectionCommon
 			return tp.time_since_epoch().count();
 		}
 
+		/**
+		 * @brief Prepare one Cassandra query/insert statement
+		 *
+		 * @param[out] stmt The Cassandra prepared statement to set up
+		 * @param[in]  query The query of the prepared statement
+		 */
+		void prepareOneStatement(CassandraStmtPtr& stmt, const std::string& query);
+
 	private:
 		/**
 		 * @brief The raw query string to select all stations from the database
@@ -232,11 +242,11 @@ class DbConnectionCommon
 		/**
 		 * @brief The first prepared statement for the getAllStations() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectAllStations;
+		CassandraStmtPtr _selectAllStations;
 		/**
 		 * @brief The second prepared statement for the getAllStations() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectAllStationsFr;
+		CassandraStmtPtr _selectAllStationsFr;
 		/**
 		 * @brief The raw query string to select the individual details of a station from the database
 		 */
@@ -245,7 +255,7 @@ class DbConnectionCommon
 		 * @brief The prepared statement for the getStationDetails()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationDetails;
+		CassandraStmtPtr _selectStationDetails;
 		/**
 		 * @brief The raw query string to select all wind observations for a given station on a given day
 		 */
@@ -257,7 +267,7 @@ class DbConnectionCommon
 		/**
 		 * @brief The prepared statement for the getWindValues() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectWindValues;
+		CassandraStmtPtr _selectWindValues;
 
 		/**
 		 * @brief Prepare the Cassandra query/insert statements

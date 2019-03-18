@@ -37,6 +37,7 @@
 #include <date.h>
 
 #include "dbconnection_common.h"
+#include "cassandra_stmt_ptr.h"
 
 namespace meteodata {
 
@@ -292,15 +293,15 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 		 * @brief The first prepared statement for the getValues()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAfter6h;
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAfter18h;
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesAllDay;
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesBefore6h;
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectValuesBefore18h;
+		CassandraStmtPtr _selectValuesAfter6h;
+		CassandraStmtPtr _selectValuesAfter18h;
+		CassandraStmtPtr _selectValuesAllDay;
+		CassandraStmtPtr _selectValuesBefore6h;
+		CassandraStmtPtr _selectValuesBefore18h;
 
 		static constexpr char SELECT_YEARLY_VALUES_STMT[] =
 			"SELECT yearrain,yearet FROM meteodata_v2.minmax WHERE station = ? AND monthyear = ? AND day = ?";
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectYearlyValues;
+		CassandraStmtPtr _selectYearlyValues;
 
 		static constexpr char INSERT_DATAPOINT_STMT[] =
 			"INSERT INTO meteodata_v2.minmax ("
@@ -376,7 +377,7 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 		/**
 		 * @brief The prepared statement for the insetDataPoint() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPoint;
+		CassandraStmtPtr _insertDataPoint;
 		/**
 		 * @brief Prepare the Cassandra query/insert statements
 		 */

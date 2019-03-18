@@ -37,6 +37,7 @@
 #include <date.h>
 
 #include "dbconnection_common.h"
+#include "cassandra_stmt_ptr.h"
 
 namespace meteodata {
 
@@ -166,7 +167,7 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 		 * @brief The first prepared statement for the getValues()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectDailyValues;
+		CassandraStmtPtr _selectDailyValues;
 
 		static constexpr char INSERT_DATAPOINT_STMT[] =
 			"INSERT INTO meteodata_v2.month_minmax ("
@@ -218,7 +219,7 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 		/**
 		 * @brief The prepared statement for the insetDataPoint() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPoint;
+		CassandraStmtPtr _insertDataPoint;
 		/**
 		 * @brief Prepare the Cassandra query/insert statements
 		 */

@@ -34,6 +34,7 @@
 
 #include "dbconnection_minmax.h"
 #include "dbconnection_common.h"
+#include "cassandra_stmt_ptr.h"
 
 using namespace date;
 
@@ -50,89 +51,20 @@ constexpr char DbConnectionMinmax::SELECT_YEARLY_VALUES_STMT[];
 namespace chrono = std::chrono;
 
 DbConnectionMinmax::DbConnectionMinmax(const std::string& address, const std::string& user, const std::string& password) :
-	DbConnectionCommon(address, user, password),
-	_selectValuesAfter6h{nullptr, cass_prepared_free},
-	_selectValuesAfter18h{nullptr, cass_prepared_free},
-	_selectValuesAllDay{nullptr, cass_prepared_free},
-	_selectValuesBefore6h{nullptr, cass_prepared_free},
-	_selectValuesBefore18h{nullptr, cass_prepared_free},
-	_selectYearlyValues{nullptr, cass_prepared_free},
-	_insertDataPoint{nullptr, cass_prepared_free}
+	DbConnectionCommon(address, user, password)
 {
 	prepareStatements();
 }
 
 void DbConnectionMinmax::prepareStatements()
 {
-	CassFuture* prepareFuture = cass_session_prepare(_session.get(), SELECT_VALUES_BEFORE_6H_STMT);
-	CassError rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement _selectValuesBefore6h: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectValuesBefore6h.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_VALUES_AFTER_6H_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement _selectValuesAfter6h: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectValuesAfter6h.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_VALUES_ALL_DAY_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement _selectValuesAllDay: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectValuesAllDay.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_VALUES_BEFORE_18H_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement _selectValuesBefore6h: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectValuesBefore18h.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_VALUES_AFTER_18H_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement _selectValuesAfter18h: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectValuesAfter18h.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), SELECT_YEARLY_VALUES_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement _selectYearlyValues: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectYearlyValues.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), INSERT_DATAPOINT_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement insertdataPoint: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_insertDataPoint.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
+	prepareOneStatement(_selectValuesBefore6h, SELECT_VALUES_BEFORE_6H_STMT);
+	prepareOneStatement(_selectValuesAfter6h, SELECT_VALUES_AFTER_6H_STMT);
+	prepareOneStatement(_selectValuesAllDay, SELECT_VALUES_ALL_DAY_STMT);
+	prepareOneStatement(_selectValuesBefore18h, SELECT_VALUES_BEFORE_18H_STMT);
+	prepareOneStatement(_selectValuesAfter18h, SELECT_VALUES_AFTER_18H_STMT);
+	prepareOneStatement(_selectYearlyValues, SELECT_YEARLY_VALUES_STMT);
+	prepareOneStatement(_insertDataPoint, INSERT_DATAPOINT_STMT);
 }
 
 bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_days& date, DbConnectionMinmax::Values& values)

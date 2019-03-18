@@ -39,6 +39,7 @@
 #include "message.h"
 #include "dbconnection_common.h"
 #include "observation.h"
+#include "cassandra_stmt_ptr.h"
 
 namespace meteodata {
 	/**
@@ -359,88 +360,88 @@ namespace meteodata {
 		 * @brief The prepared statement for the getStationByCoords()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationByCoords;
+		CassandraStmtPtr _selectStationByCoords;
 		/**
 		 * @brief The prepared statement for the getStationCoordinates()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStationCoordinates;
+		CassandraStmtPtr _selectStationCoordinates;
 		/**
 		 * @brief The prepared statement for the getAllIcaos()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectAllIcaos;
+		CassandraStmtPtr _selectAllIcaos;
 		/**
 		 * @brief The prepared statement for the getDeferredSynops() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectDeferredSynops;
+		CassandraStmtPtr _selectDeferredSynops;
 		/**
 		 * @brief The prepared statement for the getLastInsertionTime()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectLastDataInsertionTime;
+		CassandraStmtPtr _selectLastDataInsertionTime;
 		/**
 		 * @brief The prepared statement for the getLastDataBefore() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectLastDataBefore;
+		CassandraStmtPtr _selectLastDataBefore;
 		/**
 		 * @brief The prepared statement for the insertDataPoint() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPoint;
+		CassandraStmtPtr _insertDataPoint;
 		/**
 		 * @brief The prepared statement for the insertV2DataPoint() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPointInNewDB;
+		CassandraStmtPtr _insertDataPointInNewDB;
 		/**
 		 * @brief The prepared statement for the insertV2EntireDayValues() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertEntireDayValuesInNewDB;
+		CassandraStmtPtr _insertEntireDayValuesInNewDB;
 		/**
 		 * @brief The prepared statement for the insertV2Tx() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertTxInNewDB;
+		CassandraStmtPtr _insertTxInNewDB;
 		/**
 		 * @brief The prepared statement for the insertV2Tn() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertTnInNewDB;
+		CassandraStmtPtr _insertTnInNewDB;
 		/**
 		 * @brief The prepared statement for the insertMonitoringDataPoint() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _insertDataPointInMonitoringDB;
+		CassandraStmtPtr _insertDataPointInMonitoringDB;
 		/**
 		 * @brief The prepared statement for the
 		 * updateLastArchiveDownload() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _updateLastArchiveDownloadTime;
+		CassandraStmtPtr _updateLastArchiveDownloadTime;
 		/**
 		 * @brief The prepared statement for the
 		 * getWeatherlinkStations() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectWeatherlinkStations;
+		CassandraStmtPtr _selectWeatherlinkStations;
 		/**
 		 * @brief The prepared statement for the
 		 * getMqttStations() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectMqttStations;
+		CassandraStmtPtr _selectMqttStations;
 		/**
 		 * @brief The prepared statement for the
 		 * getStatICTxtStations() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectStatICTxtStations;
+		CassandraStmtPtr _selectStatICTxtStations;
 		/**
 		 * @brief The prepared statement for the
 		 * getMBDataTxtStations() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectMBDataTxtStations;
+		CassandraStmtPtr _selectMBDataTxtStations;
 		/**
 		 * @brief The prepared statement for the getRainfall() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _getRainfall;
+		CassandraStmtPtr _getRainfall;
 		/**
 		 * @brief The prepared statement for the deleteDataPoints()
 		 * method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _deleteDataPoints;
+		CassandraStmtPtr _deleteDataPoints;
 		/**
 		 * @brief Prepare the Cassandra query/insert statements
 		 */
@@ -465,11 +466,11 @@ namespace meteodata {
 		/**
 		 * @brief The prepared statement for the getTx() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectTx;
+		CassandraStmtPtr _selectTx;
 		/**
 		 * @brief The prepared statement for the getTn() method
 		 */
-		std::unique_ptr<const CassPrepared, std::function<void(const CassPrepared*)>> _selectTn;
+		CassandraStmtPtr _selectTn;
 	};
 }
 

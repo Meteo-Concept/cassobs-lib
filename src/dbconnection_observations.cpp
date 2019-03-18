@@ -35,88 +35,41 @@
 
 #include "dbconnection_observations.h"
 #include "observation.h"
+#include "cassandra_stmt_ptr.h"
 
 namespace meteodata {
 	DbConnectionObservations::DbConnectionObservations(const std::string& address, const std::string& user, const std::string& password) :
-		DbConnectionCommon(address, user, password),
-		_selectStationByCoords{nullptr, &cass_prepared_free},
-		_selectStationCoordinates{nullptr, &cass_prepared_free},
-		_selectAllIcaos{nullptr, &cass_prepared_free},
-		_selectDeferredSynops{nullptr, &cass_prepared_free},
-		_selectLastDataInsertionTime{nullptr, &cass_prepared_free},
-		_selectLastDataBefore{nullptr, &cass_prepared_free},
-		_insertDataPoint{nullptr, &cass_prepared_free},
-		_insertDataPointInNewDB{nullptr, &cass_prepared_free},
-		_insertEntireDayValuesInNewDB{nullptr, &cass_prepared_free},
-		_insertTxInNewDB{nullptr, &cass_prepared_free},
-		_insertTnInNewDB{nullptr, &cass_prepared_free},
-		_insertDataPointInMonitoringDB{nullptr, &cass_prepared_free},
-		_updateLastArchiveDownloadTime{nullptr, &cass_prepared_free},
-		_selectWeatherlinkStations{nullptr, &cass_prepared_free},
-		_selectMqttStations{nullptr, &cass_prepared_free},
-		_selectStatICTxtStations{nullptr, &cass_prepared_free},
-		_selectMBDataTxtStations{nullptr, &cass_prepared_free},
-		_getRainfall{nullptr, &cass_prepared_free},
-		_deleteDataPoints{nullptr, &cass_prepared_free},
-		_selectTx{nullptr, &cass_prepared_free},
-		_selectTn{nullptr, &cass_prepared_free}
+		DbConnectionCommon(address, user, password)
 	{
 		prepareStatements();
 	}
 
 	void DbConnectionObservations::prepareStatements()
 	{
-		CassFuture* prepareFuture = cass_session_prepare(_session.get(), "SELECT station FROM meteodata.coordinates WHERE elevation = ? AND latitude = ? AND longitude = ?");
-		CassError rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectStationByCoords: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectStationByCoords.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectStationByCoords,
+			"SELECT station FROM meteodata.coordinates "
+			"WHERE elevation = ? AND latitude = ? AND longitude = ?"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT latitude,longitude,elevation,name,polling_period FROM meteodata.stations WHERE id = ?");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectStationCoordinates: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectStationCoordinates.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectStationCoordinates,
+			"SELECT latitude,longitude,elevation,name,polling_period FROM meteodata.stations "
+			"WHERE id = ?"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT id,icao FROM meteodata.stationsFR");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectAllIcaos: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectAllIcaos.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectAllIcaos,
+			"SELECT id,icao FROM meteodata.stationsFR"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT uuid,icao FROM meteodata.deferred_synops");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectDeferredSynops: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectDeferredSynops.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectDeferredSynops,
+			"SELECT uuid,icao FROM meteodata.deferred_synops"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT time FROM meteodata.meteo WHERE station = ? LIMIT 1");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectLastInsertionTime: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectLastDataInsertionTime.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectLastDataInsertionTime,
+			"SELECT time FROM meteodata.meteo WHERE station = ? LIMIT 1"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT "
+		prepareOneStatement(_selectLastDataBefore,
+			"SELECT "
 			"station,"
 			"day, time,"
 			"barometer,"
@@ -139,17 +92,11 @@ namespace meteodata {
 			"windchill,"
 			"winddir, windgust, windspeed,"
 			"insolation_time "
-			" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectLastDataBefore: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectLastDataBefore.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+			" FROM meteodata_v2.meteo WHERE station = ? "
+			" AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(),
+		prepareOneStatement(_insertDataPoint,
 			"INSERT INTO meteodata.meteo ("
 			"station,"
 			"time,"
@@ -205,18 +152,10 @@ namespace meteodata {
 			"?,?,?,"		// "dayET, monthET, yearET,"
 			"?,?,"			// "forecast, forecast_icons,"
 			"?,?,"			// "sunrise, sunset,"
-			"?,?)");		// "rain_archive, etp_archive,"
+			"?,?)"			// "rain_archive, etp_archive,"
+		);
 
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement insertdataPoint: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_insertDataPoint.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
-
-		prepareFuture = cass_session_prepare(_session.get(),
+		prepareOneStatement(_insertDataPointInNewDB,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -262,18 +201,10 @@ namespace meteodata {
 			"?,"		// "uv,"
 			"?,"		// "windchill,"
 			"?, ?, ?,"	// "winddir, windgust, windspeed,"
-			"?)");		// "insolation_time)"
+			"?)"		// "insolation_time)"
+		);
 
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement insertdataPointInNewDB: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_insertDataPointInNewDB.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
-
-		prepareFuture = cass_session_prepare(_session.get(),
+		prepareOneStatement(_insertEntireDayValuesInNewDB,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -281,18 +212,10 @@ namespace meteodata {
 			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
-			"?, ?)");	// "rainfall24, insolation_time24)"
+			"?, ?)"		// "rainfall24, insolation_time24)"
+		);
 
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement insertEntireDayValuesInNewDB: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_insertEntireDayValuesInNewDB.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
-
-		prepareFuture = cass_session_prepare(_session.get(),
+		prepareOneStatement(_insertTxInNewDB,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -300,18 +223,10 @@ namespace meteodata {
 			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
-			"?)");		// "tx)"
+			"?)"		// "tx"
+		);
 
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement insertTxInNewDB: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_insertTxInNewDB.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
-
-		prepareFuture = cass_session_prepare(_session.get(),
+		prepareOneStatement(_insertTnInNewDB,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -319,18 +234,10 @@ namespace meteodata {
 			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
-			"?)");		// "tn)"
+			"?)"		// "tn"
+		);
 
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement insertTnInNewDB: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_insertTnInNewDB.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
-
-		prepareFuture = cass_session_prepare(_session.get(),
+		prepareOneStatement(_insertDataPointInMonitoringDB,
 			"INSERT INTO meteodata_v2.monitoring_observations ("
 			"station,"
 			"day, time,"
@@ -376,106 +283,45 @@ namespace meteodata {
 			"?,"
 			"?,"
 			"?, ?, ?,"
-			"?)");
+			"?)"
+		);
 
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement insertdataPointInMonitoringDB: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_insertDataPointInMonitoringDB.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_updateLastArchiveDownloadTime,
+			"UPDATE meteodata.stations SET last_archive_download = ? WHERE id = ?"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "UPDATE meteodata.stations SET last_archive_download = ? WHERE id = ?");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement updateLastArchiveDownloadTime: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_updateLastArchiveDownloadTime.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectWeatherlinkStations,
+			"SELECT station, auth, api_token, tz FROM meteodata.weatherlink"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, auth, api_token, tz FROM meteodata.weatherlink");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectWeatherlinkStations: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectWeatherlinkStations.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectMqttStations,
+			"SELECT station, host, port, user, password, topic, tz FROM meteodata.mqtt"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, port, user, password, topic, tz FROM meteodata.mqtt");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectMqttStations: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectMqttStations.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectStatICTxtStations,
+			"SELECT station, host, url FROM meteodata.statictxt"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, url FROM meteodata.statictxt");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectStatICTxtStations: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectStatICTxtStations.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectMBDataTxtStations,
+			"SELECT station, host, url, https, tz, type FROM meteodata.mbdatatxt"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT station, host, url, https, tz, type FROM meteodata.mbdatatxt");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectMBDataTxtStations: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectMBDataTxtStations.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_getRainfall,
+			"SELECT SUM(rainfall) FROM meteodata_v2.meteo "
+			"WHERE station = ? AND day = ? AND time >= ? AND time < ?"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT SUM(rainfall) FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time >= ? AND time < ?");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement getRainfall: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_getRainfall.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_deleteDataPoints,
+			"DELETE FROM meteodata_v2.meteo WHERE station=? AND day=? AND time>? AND time<=?"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "DELETE FROM meteodata_v2.meteo WHERE station=? AND day=? AND time>? AND time<=?");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement deleteDataPoints: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_deleteDataPoints.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectTx,
+			"SELECT tx FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1"
+		);
 
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT tx FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectTx: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectTx.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
-
-		prepareFuture = cass_session_prepare(_session.get(), "SELECT tn FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1");
-		rc = cass_future_error_code(prepareFuture);
-		if (rc != CASS_OK) {
-			std::string desc("Could not prepare statement selectTn: ");
-			desc.append(cass_error_desc(rc));
-			throw std::runtime_error(desc);
-		}
-		_selectTn.reset(cass_future_get_prepared(prepareFuture));
-		cass_future_free(prepareFuture);
+		prepareOneStatement(_selectTn,
+			"SELECT tn FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1"
+		);
 	}
 
 	bool DbConnectionObservations::getLastDataInsertionTime(const CassUuid& uuid, time_t& lastDataInsertionTime)

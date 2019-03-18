@@ -33,6 +33,7 @@
 
 #include "dbconnection_month_minmax.h"
 #include "dbconnection_common.h"
+#include "cassandra_stmt_ptr.h"
 
 using namespace date;
 
@@ -44,34 +45,15 @@ constexpr char DbConnectionMonthMinmax::SELECT_DAILY_VALUES_STMT[];
 namespace chrono = std::chrono;
 
 DbConnectionMonthMinmax::DbConnectionMonthMinmax(const std::string& address, const std::string& user, const std::string& password) :
-	DbConnectionCommon(address, user, password),
-	_selectDailyValues{nullptr, cass_prepared_free},
-	_insertDataPoint{nullptr, cass_prepared_free}
+	DbConnectionCommon(address, user, password)
 {
 	prepareStatements();
 }
 
 void DbConnectionMonthMinmax::prepareStatements()
 {
-	CassFuture* prepareFuture = cass_session_prepare(_session.get(), SELECT_DAILY_VALUES_STMT);
-	CassError rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement _selectDailyValues: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_selectDailyValues.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
-
-	prepareFuture = cass_session_prepare(_session.get(), INSERT_DATAPOINT_STMT);
-	rc = cass_future_error_code(prepareFuture);
-	if (rc != CASS_OK) {
-		std::string desc("Could not prepare statement insertdataPoint: ");
-		desc.append(cass_error_desc(rc));
-		throw std::runtime_error(desc);
-	}
-	_insertDataPoint.reset(cass_future_get_prepared(prepareFuture));
-	cass_future_free(prepareFuture);
+	prepareOneStatement(_selectDailyValues, SELECT_DAILY_VALUES_STMT);
+	prepareOneStatement(_insertDataPoint, INSERT_DATAPOINT_STMT);
 }
 
 bool DbConnectionMonthMinmax::getDailyValues(const CassUuid& uuid, int year, int month, DbConnectionMonthMinmax::Values& values)

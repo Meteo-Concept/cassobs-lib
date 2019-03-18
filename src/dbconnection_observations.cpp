@@ -1001,13 +1001,13 @@ namespace meteodata {
 			cass_statement_free
 		};
 
-		date::sys_seconds date{chrono::seconds(begin)};
+		date::sys_seconds day(date::floor<date::days>(chrono::system_clock::from_time_t(begin)));
 		date::sys_seconds final{chrono::seconds(end)};
 		bool ret = true;
 		rainfall = 0;
-		while (date < final && ret) {
+		while (day < final && ret) {
 			cass_statement_bind_uuid(statement.get(), 0, station);
-			cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(chrono::system_clock::to_time_t(date)));
+			cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(chrono::system_clock::to_time_t(day)));
 			cass_statement_bind_int64(statement.get(), 2, begin * 1000);
 			cass_statement_bind_int64(statement.get(), 3, end * 1000);
 			std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
@@ -1018,8 +1018,6 @@ namespace meteodata {
 				cass_future_get_result(query.get()),
 				cass_result_free
 			};
-
-			// TODO check if that works
 
 			if (result) {
 				const CassRow* row = cass_result_first_row(result.get());
@@ -1035,7 +1033,7 @@ namespace meteodata {
 				ret = false;
 			}
 
-			date += date::days(1);
+			day += date::days(1);
 		}
 
 		return ret;

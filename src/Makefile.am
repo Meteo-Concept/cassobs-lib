@@ -25,7 +25,7 @@ libcassobs_la_CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
 libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS)
 libcassobs_la_LDFLAGS = -version-info 0:0:0
 
-check_PROGRAMS=get_last_data get_mqtt_stations
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = \
@@ -39,3 +39,9 @@ get_mqtt_stations_SOURCES = \
 get_mqtt_stations_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
 get_mqtt_stations_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
 get_mqtt_stations_LDADD = libcassobs.la $(libcassobs_la_LIBADD)
+
+get_rainfall_SOURCES = \
+			tests/get_rainfall.cpp
+get_rainfall_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
+get_rainfall_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
+get_rainfall_LDADD = libcassobs.la $(libcassobs_la_LIBADD)

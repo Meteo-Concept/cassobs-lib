@@ -5,7 +5,8 @@ include_HEADERS = \
 		dbconnection_minmax.h\
 		dbconnection_month_minmax.h\
 		observation.h \
-		message.h
+		message.h\
+		cassandra_stmt_ptr.h
 
 libcassobs_la_SOURCES = \
 		    dbconnection_common.cpp\

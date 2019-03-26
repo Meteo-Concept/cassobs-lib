@@ -348,8 +348,8 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 				float newMin;
 				cass_value_get_float(raw, &newMin);
 				if (!values.outsideTemp_min.first || values.outsideTemp_min.second > newMin) {
-					values.outsideTemp_max.first = true;
-					values.outsideTemp_max.second = newMin;
+					values.outsideTemp_min.first = true;
+					values.outsideTemp_min.second = newMin;
 				}
 			}
 

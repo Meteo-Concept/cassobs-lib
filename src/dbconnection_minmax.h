@@ -47,6 +47,12 @@ inline void compute(std::pair<bool, T>& result, const std::pair<bool, T>& op1, c
 	if (op1.first && op2.first) {
 		result.second = op(op1.second, op2.second);
 		result.first = true;
+	} else if (op1.first) {
+		result.second = op1.second;
+		result.first = true;
+	} else if (op2.first) {
+		result.second = op2.second;
+		result.first = true;
 	} else {
 		result.first = false;
 	}

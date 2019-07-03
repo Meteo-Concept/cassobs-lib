@@ -601,12 +601,12 @@ namespace meteodata {
 		auto daypoint = date::floor<date::days>(tp);
 		auto ymd = date::sys_days{date::year_month_day{daypoint}};
 		auto tod = date::make_time(tp - daypoint);
-		if (tod.hours().count() < 6)
+		if (tod.hours().count() <= 6)
 			ymd -= date::days(1);
 		time_t correctedTime = std::chrono::system_clock::to_time_t(ymd);
 
 		std::pair<bool, float> oldTx;
-		if (!getTx(station, time, oldTx))
+		if (!getTx(station, correctedTime, oldTx))
 			return false;
 		if (oldTx.first && tx <= oldTx.second)
 			return true;
@@ -648,12 +648,12 @@ namespace meteodata {
 		auto daypoint = date::floor<date::days>(tp);
 		auto ymd = date::sys_days{date::year_month_day{daypoint}};
 		auto tod = date::make_time(tp - daypoint);
-		if (tod.hours().count() >= 18)
+		if (tod.hours().count() > 18)
 			ymd += date::days(1);
 		time_t correctedTime = std::chrono::system_clock::to_time_t(ymd);
 
 		std::pair<bool, float> oldTn;
-		if (!getTn(station, time, oldTn))
+		if (!getTn(station, correctedTime, oldTn))
 			return false;
 		if (oldTn.first && tn >= oldTn.second)
 			return true;

@@ -299,7 +299,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectStatICTxtStations,
-			"SELECT station, host, url FROM meteodata.statictxt"
+			"SELECT station, host, url, tz FROM meteodata.statictxt"
 		);
 
 		prepareOneStatement(_selectMBDataTxtStations,
@@ -839,7 +839,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string>>& stations)
+	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectStatICTxtStations.get()),
@@ -869,7 +869,9 @@ namespace meteodata {
 				const char *url;
 				size_t sizeUrl;
 				cass_value_get_string(cass_row_get_column(row,2), &url, &sizeUrl);
-				stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl});
+				int tz;
+				cass_value_get_int32(cass_row_get_column(row,3), &tz);
+				stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, tz);
 			}
 			ret = true;
 		}

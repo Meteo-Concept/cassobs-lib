@@ -302,14 +302,15 @@ namespace meteodata {
 		 * @brief Get StatIC downloadable file location for stations that make their
 		 * observations available in a StatIC file on a web server
 		 *
-		 * Each station is associated to a tuple (UUID, host, url) where 'UUID' is the identifier of the
-		 * station, 'host' the domain name of the web server, 'url' the URL of the StatIC file.
+		 * Each station is associated to a tuple (UUID, host, url, tz) where 'UUID' is the identifier of the
+		 * station, 'host' the domain name of the web server, 'url' the URL of the StatIC file, and 'tz'
+		 * the timezone identifier (normally always "0" for "UTC", but it's better not to rely on that).
 		 *
-		 * @param[out] stations A vector of tuples (UUID, host, url)
+		 * @param[out] stations A vector of tuples (UUID, host, url, tz)
 		 *
 		 * @return True if everything went well, false if an error occurred.
 		 */
-		bool getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string>>& stations);
+		bool getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations);
 		/**
 		 * @brief Get MBData downloadable file location for stations that make their
 		 * observations available in a MBData file on a web server

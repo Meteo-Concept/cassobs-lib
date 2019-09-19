@@ -294,6 +294,10 @@ namespace meteodata {
 			"SELECT station, auth, api_token, tz FROM meteodata.weatherlink"
 		);
 
+		prepareOneStatement(_selectWeatherlinkAPIv2Stations,
+			"SELECT station, archived, weatherlinkId FROM meteodata.weatherlink"
+		);
+
 		prepareOneStatement(_selectMqttStations,
 			"SELECT station, host, port, user, password, topic, tz FROM meteodata.mqtt"
 		);
@@ -782,6 +786,43 @@ namespace meteodata {
 				int timezone;
 				cass_value_get_int32(cass_row_get_column(row,3), &timezone);
 				stations.emplace_back(station, std::string{authString, sizeAuthString}, apiToken, timezone);
+			}
+			ret = true;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::string>>& stations)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectWeatherlinkAPIv2Stations.get()),
+			cass_statement_free
+		};
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+		bool ret = false;
+		if (result) {
+			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+				cass_iterator_from_result(result.get()),
+				cass_iterator_free
+			};
+			while (cass_iterator_next(iterator.get())) {
+				const CassRow* row = cass_iterator_get_row(iterator.get());
+				CassUuid station;
+				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				cass_bool_t archived;
+				cass_value_get_bool(cass_row_get_column(row,1), &archived);
+				const char *weatherlinkId;
+				size_t sizeWeatherlinkId;
+				cass_value_get_string(cass_row_get_column(row,2), &weatherlinkId, &sizeWeatherlinkId);
+				stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, std::string{weatherlinkId, sizeWeatherlinkId});
 			}
 			ret = true;
 		}

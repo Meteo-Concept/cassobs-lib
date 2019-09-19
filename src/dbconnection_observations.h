@@ -284,6 +284,21 @@ namespace meteodata {
 		bool getAllWeatherlinkStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations);
 
 		/**
+		 * @brief Get Weatherlink connection information for all the stations we retrieve the
+		 * data from using APIv2 (WeatherLink Live and EnviroMonitors as of September 2019)
+		 *
+		 * Each station is associated to a tuple (UUID, archived, weatherlinkId) where
+		 * 'UUID' is the identifier of the station, 'archived' is a boolean indicating whether
+		 * the historic data is available or only the realtime data, and 'weatherlinkId' is
+		 * the identifier of the station in WeatherLink APIv2 answers.
+		 *
+		 * @param[out] stations A vector of tuple (UUID, archived, weatherlinkId)
+		 *
+		 * @return True if everything went well, false if an error occurred
+		 */
+		bool getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::string>>& stations);
+
+		/**
 		 * @brief Get MQTT subscription details for all the stations that send their
 		 * data via MQTT
 		 *
@@ -419,6 +434,11 @@ namespace meteodata {
 		 * getWeatherlinkStations() method
 		 */
 		CassandraStmtPtr _selectWeatherlinkStations;
+		/**
+		 * @brief The prepared statement for the
+		 * getWeatherlinkAPIv2Stations() method
+		 */
+		CassandraStmtPtr _selectWeatherlinkAPIv2Stations;
 		/**
 		 * @brief The prepared statement for the
 		 * getMqttStations() method

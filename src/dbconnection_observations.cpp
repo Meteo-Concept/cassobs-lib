@@ -295,7 +295,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectWeatherlinkAPIv2Stations,
-			"SELECT station, archived, weatherlinkId FROM meteodata.weatherlink"
+			"SELECT station, archived, weatherlink_id FROM meteodata.weatherlink_apiv2"
 		);
 
 		prepareOneStatement(_selectMqttStations,

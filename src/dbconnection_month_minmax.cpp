@@ -79,8 +79,10 @@ bool DbConnectionMonthMinmax::getDailyValues(const CassUuid& uuid, int year, int
 			storeCassandraFloat(row, param++, values.outsideTemp_max_min);
 			storeCassandraFloat(row, param++, values.outsideTemp_min_max);
 			storeCassandraFloat(row, param++, values.outsideTemp_min_min);
+			storeCassandraFloat(row, param++, values.wind_avg);
 			storeCassandraFloat(row, param++, values.windgust_max);
 			storeCassandraFloat(row, param++, values.rainfall);
+			storeCassandraFloat(row, param++, values.rainfall_max);
 			storeCassandraFloat(row, param++, values.rainrate_max);
 			storeCassandraFloat(row, param++, values.etp);
 			storeCassandraFloat(row, param++, values.barometer_min);
@@ -92,6 +94,7 @@ bool DbConnectionMonthMinmax::getDailyValues(const CassUuid& uuid, int year, int
 			storeCassandraInt(row, param++, values.solarRad_avg);
 			storeCassandraInt(row, param++, values.uv_max);
 			storeCassandraInt(row, param++, values.insolationTime);
+			storeCassandraInt(row, param++, values.insolationTime_max);
 			ret = true;
 		}
 	}
@@ -124,13 +127,16 @@ bool DbConnectionMonthMinmax::insertDataPoint(const CassUuid& station, int year,
 	bindCassandraFloat(statement, param++, values.outsideTemp_min_max);
 	bindCassandraFloat(statement, param++, values.outsideTemp_min_min);
 	bindCassandraFloat(statement, param++, values.rainfall);
+	bindCassandraFloat(statement, param++, values.rainfall_max);
 	bindCassandraFloat(statement, param++, values.rainrate_max);
 	bindCassandraFloat(statement, param++, values.solarRad_avg);
 	bindCassandraFloat(statement, param++, values.solarRad_max);
 	bindCassandraInt(statement, param++, values.uv_max);
 	bindCassandraList(statement, param++, values.winddir);
+	bindCassandraFloat(statement, param++, values.wind_avg);
 	bindCassandraFloat(statement, param++, values.windgust_max);
 	bindCassandraInt(statement, param++, values.insolationTime);
+	bindCassandraInt(statement, param++, values.insolationTime_max);
 	query = cass_session_execute(_session.get(), statement);
 	cass_statement_free(statement);
 

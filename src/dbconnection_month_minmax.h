@@ -72,6 +72,7 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			std::pair<bool, float> outsideTemp_min_min;
 
 			std::pair<bool, float> rainfall;
+			std::pair<bool, float> rainfall_max;
 			std::pair<bool, float> rainrate_max;
 
 			std::pair<bool, float> barometer_min;
@@ -80,10 +81,14 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 
 			std::pair<bool, int> outsideHum_min;
 			std::pair<bool, int> outsideHum_max;
+
 			std::pair<bool, int> solarRad_max;
 			std::pair<bool, int> solarRad_avg;
 			std::pair<bool, int> insolationTime;
+			std::pair<bool, int> insolationTime_max;
 			std::pair<bool, int> uv_max;
+
+			std::pair<bool, float> wind_avg;
 			std::pair<bool, float> windgust_max;
 			std::pair<bool, std::vector<int>> winddir;
 			std::pair<bool, float> etp;
@@ -148,8 +153,10 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"MIN(outsidetemp_max)		AS outsidetemp_max_min, "
 			"MAX(outsidetemp_min)		AS outsidetemp_min_max, "
 			"MIN(outsidetemp_min)		AS outsidetemp_min_min, "
+			"meteodata_v2.avg(windspeed_avg) AS wind_avg, "
 			"MAX(windgust_max)		AS windgust_max, "
 			"SUM(dayrain)			AS rainfall, "
+			"MAX(dayrain)			AS rainfall_max, "
 			"MAX(rainrate_max)		AS rainrate_max, "
 			"SUM(dayet)			AS etp, "
 			"MIN(barometer_min)		AS barometer_min, "
@@ -160,7 +167,8 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"MAX(solarrad_max)		AS solarrad_max, "
 			"meteodata_v2.avg(solarrad_avg)	AS solarrad_avg, "
 			"MAX(uv_max)			AS uv_max, "
-			"SUM(insolation_time)		AS insolation_time "
+			"SUM(insolation_time)		AS insolation_time, "
+			"MAX(insolation_time)		AS insolation_time_max "
 			" FROM meteodata_v2.minmax WHERE station = ? AND monthyear = ?";
 			//" FROM meteodata.minmax WHERE station = ? AND date >= ? AND date < ?";
 		/**
@@ -186,14 +194,20 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"outsidetemp_min_max,"
 			"outsidetemp_min_min,"
 			"rainfall,"
+			"rainfall_max,"
 			"rainrate_max,"
 			"solarrad_avg,"
 			"solarrad_max,"
 			"uv_max,"
 			"winddir,"
+			"wind_speed_avg,"
 			"windgust_speed_max,"
-			"insolation_time)"
+			"insolation_time,"
+			"insolation_time_max)"
 			" VALUES ("
+			"?,"
+			"?,"
+			"?,"
 			"?,"
 			"?,"
 			"?,"

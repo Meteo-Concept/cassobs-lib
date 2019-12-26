@@ -41,6 +41,7 @@ constexpr char DbConnectionCommon::SELECT_ALL_STATIONS_STMT[];
 constexpr char DbConnectionCommon::SELECT_ALL_STATIONS_FR_STMT[];
 constexpr char DbConnectionCommon::SELECT_WIND_VALUES_STMT[];
 constexpr char DbConnectionCommon::SELECT_STATION_DETAILS_STMT[];
+constexpr char DbConnectionCommon::SELECT_STATION_LOCATION_STMT[];
 
 namespace chrono = std::chrono;
 
@@ -81,6 +82,7 @@ void DbConnectionCommon::prepareStatements()
 	prepareOneStatement(_selectAllStations, SELECT_ALL_STATIONS_STMT);
 	prepareOneStatement(_selectAllStationsFr, SELECT_ALL_STATIONS_FR_STMT);
 	prepareOneStatement(_selectStationDetails, SELECT_STATION_DETAILS_STMT);
+	prepareOneStatement(_selectStationLocation, SELECT_STATION_LOCATION_STMT);
 	prepareOneStatement(_selectWindValues, SELECT_WIND_VALUES_STMT);
 }
 
@@ -167,6 +169,37 @@ bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& na
 			lastArchiveDownloadTime = timeMillisec/1000;
 			name.clear();
 			name.insert(0, stationName, size);
+			ret = true;
+		}
+	}
+
+	return ret;
+}
+
+bool DbConnectionCommon::getStationLocation(const CassUuid& uuid, float& latitude, float& longitude, int& elevation)
+{
+	std::cerr << "About to execute statement getStationLocation" << std::endl;
+	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+		cass_prepared_bind(_selectStationLocation.get()),
+		cass_statement_free
+	};
+	cass_statement_bind_uuid(statement.get(), 0, uuid);
+	std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+		cass_session_execute(_session.get(), statement.get()),
+		cass_future_free
+	};
+	std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+		cass_future_get_result(query.get()),
+		cass_result_free
+	};
+
+	bool ret = false;
+	if (result) {
+		const CassRow* row = cass_result_first_row(result.get());
+		if (row) {
+			cass_value_get_float(cass_row_get_column(row,0), &latitude);
+			cass_value_get_float(cass_row_get_column(row,1), &longitude);
+			cass_value_get_int32(cass_row_get_column(row,2), &elevation);
 			ret = true;
 		}
 	}

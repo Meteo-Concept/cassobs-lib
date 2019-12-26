@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([CassObs], [0.1], [contact@meteo-concept.fr])
+AC_INIT([CassObs], [0.2], [contact@meteo-concept.fr])
 AC_CONFIG_SRCDIR([src/dbconnection_common.h])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIRS([m4])

@@ -71,6 +71,18 @@ class DbConnectionCommon
 		 * @return True if, and only if, all went well
 		 */
 		bool getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime);
+		/**
+		 * @brief Get the latitude, longitude and elevation of the station
+		 *
+		 * @param uuid The station identifier
+		 * @param[out] latitude Where to store the latitude of the station
+		 * @param[out] longitude Where to store the longitude of the station
+		 * @param[out] elevation Where to store the elevation in meters above
+		 * the level of the sea of the station
+		 *
+		 * @return True if, and only if, all went well
+		 */
+		bool getStationLocation(const CassUuid& uuid, float& latitude, float& longitude, int& elevation);
 		bool getWindValues(const CassUuid& station, const date::sys_days& date, std::vector<std::pair<int,float>>& values);
 
 	protected:
@@ -111,7 +123,7 @@ class DbConnectionCommon
 		 * @param[in] column The column index of the value to be retrieved in the \a row
 		 * @param[out] value A pair (bool,float), the first element is
 		 * false if the value in the row is null, the second element contains the
-		 * integer if the first element is true
+		 * float if the first element is true
 		 */
 		inline void storeCassandraFloat(const CassRow* row, int column, std::pair<bool, float>& value)
 		{
@@ -123,6 +135,23 @@ class DbConnectionCommon
 				value.first = true;
 				cass_value_get_float(raw, &value.second);
 			}
+		}
+
+		/**
+		 * @brief Retrieve a date from a Cassandra result row
+		 *
+		 * @param[in] row A Cassandra row, resulting from a SELECT query
+		 * @param[in] column The column index of the value to be retrieved in the \a row
+		 * @param[out] value The date
+		 */
+		inline void storeCassandraDate(const CassRow* row, int column, date::sys_days& value)
+		{
+			const CassValue* raw = cass_row_get_column(row, column);
+			cass_uint32_t cassDate;
+			cass_value_get_uint32(raw, &cassDate);
+			std::cerr << "datetime: " << cass_date_time_to_epoch(cassDate, 0) << std::endl;
+			chrono::system_clock::time_point epochDate = chrono::system_clock::from_time_t(time_t(cass_date_time_to_epoch(cassDate, 0)));
+			value = date::floor<date::days>(epochDate);
 		}
 
 		/**
@@ -256,6 +285,15 @@ class DbConnectionCommon
 		 * method
 		 */
 		CassandraStmtPtr _selectStationDetails;
+		/**
+		 * @brief The raw query string to select the location of a station from the database
+		 */
+		static constexpr char SELECT_STATION_LOCATION_STMT[] = "SELECT latitude,longitude,elevation FROM meteodata.stations WHERE id = ?";
+		/**
+		 * @brief The prepared statement for the getStationLocation()
+		 * method
+		 */
+		CassandraStmtPtr _selectStationLocation;
 		/**
 		 * @brief The raw query string to select all wind observations for a given station on a given day
 		 */

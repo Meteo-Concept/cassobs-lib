@@ -149,7 +149,6 @@ class DbConnectionCommon
 			const CassValue* raw = cass_row_get_column(row, column);
 			cass_uint32_t cassDate;
 			cass_value_get_uint32(raw, &cassDate);
-			std::cerr << "datetime: " << cass_date_time_to_epoch(cassDate, 0) << std::endl;
 			chrono::system_clock::time_point epochDate = chrono::system_clock::from_time_t(time_t(cass_date_time_to_epoch(cassDate, 0)));
 			value = date::floor<date::days>(epochDate);
 		}

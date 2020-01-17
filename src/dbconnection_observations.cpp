@@ -291,23 +291,23 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectWeatherlinkStations,
-			"SELECT station, auth, api_token, tz FROM meteodata.weatherlink"
+			"SELECT station, active, auth, api_token, tz FROM meteodata.weatherlink"
 		);
 
 		prepareOneStatement(_selectWeatherlinkAPIv2Stations,
-			"SELECT station, archived, weatherlink_id FROM meteodata.weatherlink_apiv2"
+			"SELECT station, active, archived, weatherlink_id FROM meteodata.weatherlink_apiv2"
 		);
 
 		prepareOneStatement(_selectMqttStations,
-			"SELECT station, host, port, user, password, topic, tz FROM meteodata.mqtt"
+			"SELECT station, active, host, port, user, password, topic, tz FROM meteodata.mqtt"
 		);
 
 		prepareOneStatement(_selectStatICTxtStations,
-			"SELECT station, host, url, tz FROM meteodata.statictxt"
+			"SELECT station, active, host, url, tz FROM meteodata.statictxt"
 		);
 
 		prepareOneStatement(_selectMBDataTxtStations,
-			"SELECT station, host, url, https, tz, type FROM meteodata.mbdatatxt"
+			"SELECT station, active, host, url, https, tz, type FROM meteodata.mbdatatxt"
 		);
 
 		prepareOneStatement(_getRainfall,
@@ -772,11 +772,13 @@ namespace meteodata {
 				const CassRow* row = cass_iterator_get_row(iterator.get());
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				cass_bool_t active;
+				cass_value_get_bool(cass_row_get_column(row,1), &active);
 				const char *authString;
 				size_t sizeAuthString;
-				cass_value_get_string(cass_row_get_column(row,1), &authString, &sizeAuthString);
+				cass_value_get_string(cass_row_get_column(row,2), &authString, &sizeAuthString);
 				std::string apiToken;
-				const CassValue* raw = cass_row_get_column(row, 2);
+				const CassValue* raw = cass_row_get_column(row,3);
 				if (!cass_value_is_null(raw)) {
 					const char *token;
 					size_t sizeToken;
@@ -784,8 +786,9 @@ namespace meteodata {
 					apiToken.assign(token, sizeToken);
 				}
 				int timezone;
-				cass_value_get_int32(cass_row_get_column(row,3), &timezone);
-				stations.emplace_back(station, std::string{authString, sizeAuthString}, apiToken, timezone);
+				cass_value_get_int32(cass_row_get_column(row,4), &timezone);
+				if (active == cass_true)
+					stations.emplace_back(station, std::string{authString, sizeAuthString}, apiToken, timezone);
 			}
 			ret = true;
 		}
@@ -817,12 +820,15 @@ namespace meteodata {
 				const CassRow* row = cass_iterator_get_row(iterator.get());
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				cass_bool_t active;
+				cass_value_get_bool(cass_row_get_column(row,1), &active);
 				cass_bool_t archived;
-				cass_value_get_bool(cass_row_get_column(row,1), &archived);
+				cass_value_get_bool(cass_row_get_column(row,2), &archived);
 				const char *weatherlinkId;
 				size_t sizeWeatherlinkId;
-				cass_value_get_string(cass_row_get_column(row,2), &weatherlinkId, &sizeWeatherlinkId);
-				stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, std::string{weatherlinkId, sizeWeatherlinkId});
+				cass_value_get_string(cass_row_get_column(row,3), &weatherlinkId, &sizeWeatherlinkId);
+				if (active == cass_true)
+					stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, std::string{weatherlinkId, sizeWeatherlinkId});
 			}
 			ret = true;
 		}
@@ -854,25 +860,28 @@ namespace meteodata {
 				const CassRow* row = cass_iterator_get_row(iterator.get());
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				cass_bool_t active;
+				cass_value_get_bool(cass_row_get_column(row,1), &active);
 				const char *host;
 				size_t sizeHost;
-				cass_value_get_string(cass_row_get_column(row,1), &host, &sizeHost);
+				cass_value_get_string(cass_row_get_column(row,2), &host, &sizeHost);
 				int port;
-				cass_value_get_int32(cass_row_get_column(row,2), &port);
+				cass_value_get_int32(cass_row_get_column(row,3), &port);
 				const char *user;
 				size_t sizeUser;
-				cass_value_get_string(cass_row_get_column(row,3), &user, &sizeUser);
+				cass_value_get_string(cass_row_get_column(row,4), &user, &sizeUser);
 				const char *pw;
 				size_t sizePw;
-				cass_value_get_string(cass_row_get_column(row,4), &pw, &sizePw);
+				cass_value_get_string(cass_row_get_column(row,5), &pw, &sizePw);
 				std::unique_ptr<char[]> pwCopy = std::make_unique<char[]>(sizePw+1);
 				std::strncpy(pwCopy.get(), pw, sizePw);
 				const char *topic;
 				size_t sizeTopic;
-				cass_value_get_string(cass_row_get_column(row,5), &topic, &sizeTopic);
+				cass_value_get_string(cass_row_get_column(row,6), &topic, &sizeTopic);
 				int tz;
-				cass_value_get_int32(cass_row_get_column(row,6), &tz);
-				stations.emplace_back(station, std::string{host, sizeHost}, port, std::string{user, sizeUser}, std::move(pwCopy), sizePw, std::string{topic, sizeTopic}, tz);
+				cass_value_get_int32(cass_row_get_column(row,7), &tz);
+				if (active == cass_true)
+					stations.emplace_back(station, std::string{host, sizeHost}, port, std::string{user, sizeUser}, std::move(pwCopy), sizePw, std::string{topic, sizeTopic}, tz);
 			}
 			ret = true;
 		}
@@ -904,15 +913,18 @@ namespace meteodata {
 				const CassRow* row = cass_iterator_get_row(iterator.get());
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				cass_bool_t active;
+				cass_value_get_bool(cass_row_get_column(row,1), &active);
 				const char *host;
 				size_t sizeHost;
-				cass_value_get_string(cass_row_get_column(row,1), &host, &sizeHost);
+				cass_value_get_string(cass_row_get_column(row,2), &host, &sizeHost);
 				const char *url;
 				size_t sizeUrl;
-				cass_value_get_string(cass_row_get_column(row,2), &url, &sizeUrl);
+				cass_value_get_string(cass_row_get_column(row,3), &url, &sizeUrl);
 				int tz;
-				cass_value_get_int32(cass_row_get_column(row,3), &tz);
-				stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, tz);
+				cass_value_get_int32(cass_row_get_column(row,4), &tz);
+				if (active == cass_true)
+					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, tz);
 			}
 			ret = true;
 		}
@@ -944,20 +956,23 @@ namespace meteodata {
 				const CassRow* row = cass_iterator_get_row(iterator.get());
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				cass_bool_t active;
+				cass_value_get_bool(cass_row_get_column(row,1), &active);
 				const char* host;
 				size_t sizeHost;
-				cass_value_get_string(cass_row_get_column(row,1), &host, &sizeHost);
+				cass_value_get_string(cass_row_get_column(row,2), &host, &sizeHost);
 				const char* url;
 				size_t sizeUrl;
-				cass_value_get_string(cass_row_get_column(row,2), &url, &sizeUrl);
+				cass_value_get_string(cass_row_get_column(row,3), &url, &sizeUrl);
 				cass_bool_t https;
-				cass_value_get_bool(cass_row_get_column(row,3), &https);
+				cass_value_get_bool(cass_row_get_column(row,4), &https);
 				int tz;
-				cass_value_get_int32(cass_row_get_column(row,4), &tz);
+				cass_value_get_int32(cass_row_get_column(row,5), &tz);
 				const char* type;
 				size_t sizeType;
-				cass_value_get_string(cass_row_get_column(row,5), &type, &sizeType);
-				stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz, std::string{type, sizeType});
+				cass_value_get_string(cass_row_get_column(row,6), &type, &sizeType);
+				if (active == cass_true)
+					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz, std::string{type, sizeType});
 			}
 			ret = true;
 		}

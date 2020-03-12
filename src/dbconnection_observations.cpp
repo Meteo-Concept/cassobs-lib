@@ -178,7 +178,8 @@ namespace meteodata {
 			"uv,"
 			"windchill,"
 			"winddir, windgust, windspeed,"
-			"insolation_time) "
+			"insolation_time,"
+			"min_outside_temperature, max_outside_temperature) "
 			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
@@ -201,7 +202,8 @@ namespace meteodata {
 			"?,"		// "uv,"
 			"?,"		// "windchill,"
 			"?, ?, ?,"	// "winddir, windgust, windspeed,"
-			"?)"		// "insolation_time)"
+			"?,"		// "insolation_time"
+			"?,?)"		// "min_outside_temperature, max_outside_temperature"
 		);
 
 		prepareOneStatement(_insertEntireDayValuesInNewDB,

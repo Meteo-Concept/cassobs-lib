@@ -27,6 +27,7 @@
 #include <utility>
 #include <memory>
 #include <cstring>
+#include <map>
 
 #include <cassandra.h>
 #include <syslog.h>
@@ -297,7 +298,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectWeatherlinkAPIv2Stations,
-			"SELECT station, active, archived, weatherlink_id FROM meteodata.weatherlink_apiv2"
+			"SELECT station, active, archived, substations, weatherlink_id FROM meteodata.weatherlink_apiv2"
 		);
 
 		prepareOneStatement(_selectMqttStations,
@@ -798,7 +799,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnectionObservations::getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::string>>& stations)
+	bool DbConnectionObservations::getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::map<int, CassUuid>, std::string>>& stations)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectWeatherlinkAPIv2Stations.get()),
@@ -826,11 +827,28 @@ namespace meteodata {
 				cass_value_get_bool(cass_row_get_column(row,1), &active);
 				cass_bool_t archived;
 				cass_value_get_bool(cass_row_get_column(row,2), &archived);
+
+				std::map<int, CassUuid> mapping;
+				const CassValue* mappingValue = cass_row_get_column(row, 3);
+				if (!cass_value_is_null(mappingValue)) {
+					std::unique_ptr<CassIterator, void(&)(CassIterator*)> mappingIterator{
+						cass_iterator_from_collection(mappingValue),
+						cass_iterator_free
+					};
+					while (cass_iterator_next(mappingIterator.get())) {
+						int sensorId;
+						cass_value_get_int32(cass_iterator_get_map_key(mappingIterator.get()), &sensorId);
+						CassUuid substation;
+						cass_value_get_uuid(cass_iterator_get_map_value(mappingIterator.get()), &substation);
+						mapping.emplace(sensorId, std::move(substation));
+					}
+				}
+
 				const char *weatherlinkId;
 				size_t sizeWeatherlinkId;
-				cass_value_get_string(cass_row_get_column(row,3), &weatherlinkId, &sizeWeatherlinkId);
+				cass_value_get_string(cass_row_get_column(row,4), &weatherlinkId, &sizeWeatherlinkId);
 				if (active == cass_true)
-					stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, std::string{weatherlinkId, sizeWeatherlinkId});
+					stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, mapping, std::string{weatherlinkId, sizeWeatherlinkId});
 			}
 			ret = true;
 		}

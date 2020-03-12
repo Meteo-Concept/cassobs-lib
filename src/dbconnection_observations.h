@@ -32,6 +32,7 @@
 #include <tuple>
 #include <vector>
 #include <string>
+#include <map>
 
 #include <cassandra.h>
 #include <date.h>
@@ -289,14 +290,16 @@ namespace meteodata {
 		 *
 		 * Each station is associated to a tuple (UUID, archived, weatherlinkId) where
 		 * 'UUID' is the identifier of the station, 'archived' is a boolean indicating whether
-		 * the historic data is available or only the realtime data, and 'weatherlinkId' is
-		 * the identifier of the station in WeatherLink APIv2 answers.
+		 * the historic data is available or only the realtime data, 'mapping' is a mapping
+		 * from sensor ids to UUIDs used for weatherlink stations that are mapped to several
+		 * Meteodata stations and 'weatherlinkId' is the identifier of the station in
+		 * WeatherLink APIv2 answers.
 		 *
-		 * @param[out] stations A vector of tuple (UUID, archived, weatherlinkId)
+		 * @param[out] stations A vector of tuple (UUID, archived, mapping, weatherlinkId)
 		 *
 		 * @return True if everything went well, false if an error occurred
 		 */
-		bool getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::string>>& stations);
+		bool getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::map<int,CassUuid>, std::string>>& stations);
 
 		/**
 		 * @brief Get MQTT subscription details for all the stations that send their

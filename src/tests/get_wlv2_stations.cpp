@@ -71,7 +71,7 @@ int main()
 
 		const std::map<int, CassUuid>& mapping = std::get<2>(s);
 		if (!mapping.empty()) {
-			for (auto m : mapping) {
+			for (const auto& m : mapping) {
 				char uuid2[CASS_UUID_STRING_LENGTH];
 				cass_uuid_string(m.second, uuid2);
 				std::cout << "\tsensor " << m.first << " : " << "station " << uuid2 << "\n";

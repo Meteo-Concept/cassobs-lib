@@ -730,14 +730,17 @@ namespace meteodata {
 		cass_statement_bind_int64(statement.get(), 0, time * 1000);
 		cass_statement_bind_uuid(statement.get(), 1, station);
 
+		std::cerr << "	Parameters bound in query" << std::endl;
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 			cass_session_execute(_session.get(), statement.get()),
 			cass_future_free
 		};
+		std::cerr << "	Query sent" << std::endl;
 		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
 			cass_future_get_result(query.get()),
 			cass_result_free
 		};
+		std::cerr << "	Result acquired" << std::endl;
 
 		bool ret = true;
 		if (!result) {
@@ -832,7 +835,7 @@ namespace meteodata {
 				const CassValue* mappingValue = cass_row_get_column(row, 3);
 				if (!cass_value_is_null(mappingValue)) {
 					std::unique_ptr<CassIterator, void(&)(CassIterator*)> mappingIterator{
-						cass_iterator_from_collection(mappingValue),
+						cass_iterator_from_map(mappingValue),
 						cass_iterator_free
 					};
 					while (cass_iterator_next(mappingIterator.get())) {
@@ -840,10 +843,9 @@ namespace meteodata {
 						cass_value_get_int32(cass_iterator_get_map_key(mappingIterator.get()), &sensorId);
 						CassUuid substation;
 						cass_value_get_uuid(cass_iterator_get_map_value(mappingIterator.get()), &substation);
-						mapping.emplace(sensorId, std::move(substation));
+						mapping.emplace(sensorId, substation);
 					}
 				}
-
 				const char *weatherlinkId;
 				size_t sizeWeatherlinkId;
 				cass_value_get_string(cass_row_get_column(row,4), &weatherlinkId, &sizeWeatherlinkId);

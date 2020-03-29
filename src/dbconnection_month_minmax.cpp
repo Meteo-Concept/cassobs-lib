@@ -137,6 +137,11 @@ bool DbConnectionMonthMinmax::insertDataPoint(const CassUuid& station, int year,
 	bindCassandraFloat(statement, param++, values.windgust_max);
 	bindCassandraInt(statement, param++, values.insolationTime);
 	bindCassandraInt(statement, param++, values.insolationTime_max);
+	bindCassandraFloat(statement, param++, values.diff_outsideTemp_avg);
+	bindCassandraFloat(statement, param++, values.diff_outsideTemp_min_min);
+	bindCassandraFloat(statement, param++, values.diff_outsideTemp_max_max);
+	bindCassandraFloat(statement, param++, values.diff_rainfall);
+	bindCassandraFloat(statement, param++, values.diff_insolationTime);
 	query = cass_session_execute(_session.get(), statement);
 	cass_statement_free(statement);
 

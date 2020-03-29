@@ -4,6 +4,7 @@ include_HEADERS = \
 		dbconnection_common.h\
 		dbconnection_minmax.h\
 		dbconnection_month_minmax.h\
+		dbconnection_normals.h\
 		observation.h \
 		message.h\
 		cassandra_stmt_ptr.h\
@@ -21,6 +22,8 @@ libcassobs_la_SOURCES = \
 		    dbconnection_month_minmax.h\
 		    dbconnection_records.cpp\
 		    dbconnection_records.h\
+		    dbconnection_normals.cpp\
+		    dbconnection_normals.h\
 		    monthly_records.cpp\
 		    monthly_records.h\
 		    cassandra_stmt_ptr.h\
@@ -28,12 +31,12 @@ libcassobs_la_SOURCES = \
 		    observation.cpp \
 		    message.h
 
-libcassobs_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CPPFLAGS) $(DATE_CPPFLAGS)
+libcassobs_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CPPFLAGS) $(DATE_CPPFLAGS) $(MYSQL_CPPFLAGS)
 libcassobs_la_CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
-libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS)
+libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(MYSQL_LIBS)
 libcassobs_la_LDFLAGS = -version-info 0:0:0
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_normals
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = \
@@ -59,6 +62,12 @@ get_rainfall_SOURCES = \
 get_rainfall_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
 get_rainfall_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
 get_rainfall_LDADD = libcassobs.la $(libcassobs_la_LIBADD)
+
+get_normals_SOURCES = \
+			tests/get_normals.cpp
+get_normals_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
+get_normals_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
+get_normals_LDADD = libcassobs.la $(libcassobs_la_LIBADD)
 
 compute_records_SOURCES = \
 		tests/compute_records.cpp

@@ -92,54 +92,13 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			std::pair<bool, float> windgust_max;
 			std::pair<bool, std::vector<int>> winddir;
 			std::pair<bool, float> etp;
+
+			std::pair<bool, float> diff_outsideTemp_avg;
+			std::pair<bool, float> diff_outsideTemp_min_min;
+			std::pair<bool, float> diff_outsideTemp_max_max;
+			std::pair<bool, float> diff_rainfall;
+			std::pair<bool, int> diff_insolationTime;
 		};
-
-		inline void storeCassandraInt(const CassRow* row, int column, std::pair<bool, int>& value)
-		{
-			const CassValue* raw = cass_row_get_column(row, column);
-			if (cass_value_is_null(raw)) {
-				//	std::cerr << "Detected an int null value at column " << column << std::endl;
-				value.first = false;
-			} else {
-				value.first = true;
-				cass_value_get_int32(raw, &value.second);
-			}
-		}
-
-		inline void storeCassandraFloat(const CassRow* row, int column, std::pair<bool, float>& value)
-		{
-			const CassValue* raw = cass_row_get_column(row, column);
-			if (cass_value_is_null(raw)) {
-				//	std::cerr << "Detected a float null value as column " << column << std::endl;
-				value.first = false;
-			} else {
-				value.first = true;
-				cass_value_get_float(raw, &value.second);
-			}
-		}
-
-		inline void bindCassandraInt(CassStatement* stmt, int column, const std::pair<bool, int>& value)
-		{
-			if (value.first)
-				cass_statement_bind_int32(stmt, column, value.second);
-		}
-
-		inline void bindCassandraFloat(CassStatement* stmt, int column, const std::pair<bool, float>& value)
-		{
-			if (value.first)
-				cass_statement_bind_float(stmt, column, value.second);
-		}
-
-		inline void bindCassandraList(CassStatement* stmt, int column, const std::pair<bool, std::vector<int>>& values)
-		{
-			if (values.first) {
-				CassCollection *collection = cass_collection_new(CASS_COLLECTION_TYPE_LIST, values.second.size());
-				for (int v : values.second)
-					cass_collection_append_int32(collection, v);
-				cass_statement_bind_collection(stmt, column, collection);
-				cass_collection_free(collection);
-			}
-		}
 
 		bool insertDataPoint(const CassUuid& station, int year, int month, const Values& values);
 
@@ -203,8 +162,18 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"wind_speed_avg,"
 			"windgust_speed_max,"
 			"insolation_time,"
-			"insolation_time_max)"
+			"insolation_time_max,"
+			"diff_outside_temperature_avg,"
+			"diff_outside_temperature_min_min,"
+			"diff_outside_temperature_max_max,"
+			"diff_rainfall,"
+			"diff_insolation_time)"
 			" VALUES ("
+			"?,"
+			"?,"
+			"?,"
+			"?,"
+			"?,"
 			"?,"
 			"?,"
 			"?,"

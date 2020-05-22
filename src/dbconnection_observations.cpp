@@ -315,7 +315,7 @@ namespace meteodata {
 
 		prepareOneStatement(_getRainfall,
 			"SELECT SUM(rainfall) FROM meteodata_v2.meteo "
-			"WHERE station = ? AND day = ? AND time >= ? AND time < ?"
+			"WHERE station = ? AND day = ? AND time > ? AND time <= ?"
 		);
 
 		prepareOneStatement(_deleteDataPoints,

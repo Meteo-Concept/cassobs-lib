@@ -148,6 +148,11 @@ bool DbConnectionRecords::getCurrentRecords(const CassUuid& station, date::month
 
 	values.setMonth(month);
 	const CassResult* result = cass_future_get_result(query);
+	if (!result) {
+		cass_future_free(query);
+		return false;
+	}
+
 	CassIterator* it = cass_iterator_from_result(result);
 	while (cass_iterator_next(it)) {
 		const CassRow* row = cass_iterator_get_row(it);
@@ -319,8 +324,8 @@ bool DbConnectionRecords::insertDataPoint(const CassUuid& station, MonthlyRecord
 		cass_future_error_message(query, &error_message, &error_message_length);
 		std::cerr << "Error from Cassandra: " << error_message << std::endl;
 		ret = false;
+		cass_result_free(result);
 	}
-	cass_result_free(result);
 	cass_future_free(query);
 
 	return ret;

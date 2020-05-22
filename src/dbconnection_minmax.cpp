@@ -488,8 +488,8 @@ bool DbConnectionMinmax::insertDataPoint(const CassUuid& station, const date::sy
 		cass_future_error_message(query, &error_message, &error_message_length);
 		std::cerr << "Error from Cassandra: " << error_message << std::endl;
 		ret = false;
+		cass_result_free(result);
 	}
-	cass_result_free(result);
 	cass_future_free(query);
 
 	return ret;

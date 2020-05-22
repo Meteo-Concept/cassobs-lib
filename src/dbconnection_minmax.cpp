@@ -83,6 +83,7 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 	std::pair<bool, float> insideTemp_max[2];
 	std::pair<bool, float> leafTemp_max[2][2];
 	std::pair<bool, float> outsideTemp_max[2];
+	std::pair<bool, float> real_outsideTemp_max[2];
 	std::pair<bool, float> soilTemp_max[2][4];
 	std::pair<bool, float> extraTemp_max[2][3];
 	std::pair<bool, float> rainfall[2];
@@ -98,6 +99,7 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 			for (int i=0 ; i<2 ; i++)
 				storeCassandraFloat(row, param++,  leafTemp_max[0][i]);
 			storeCassandraFloat(row, param++, outsideTemp_max[0]);
+			storeCassandraFloat(row, param++, real_outsideTemp_max[0]);
 			for (int i=0 ; i<4 ; i++)
 				storeCassandraFloat(row, param++, soilTemp_max[0][i]);
 			for (int i=0 ; i<3 ; i++)
@@ -115,7 +117,7 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 		values.insideTemp_max = insideTemp_max[0];
 		for (int i=0 ; i<2 ; i++)
 			values.leafTemp_max[i] = leafTemp_max[0][i];
-		values.outsideTemp_max = outsideTemp_max[0];
+		computeMax(values.outsideTemp_max, outsideTemp_max[0], real_outsideTemp_max[0]);
 		for (int i=0 ; i<2 ; i++)
 			values.soilTemp_max[i] = soilTemp_max[0][i];
 		for (int i=0 ; i<2 ; i++)
@@ -147,6 +149,7 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 			for (int i=0 ; i<2 ; i++)
 				storeCassandraFloat(row, param++,  leafTemp_max[1][i]);
 			storeCassandraFloat(row, param++, outsideTemp_max[1]);
+			storeCassandraFloat(row, param++, real_outsideTemp_max[1]);
 			for (int i=0 ; i<4 ; i++)
 				storeCassandraFloat(row, param++, soilTemp_max[1][i]);
 			for (int i=0 ; i<3 ; i++)
@@ -163,7 +166,10 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 	computeMax(values.insideTemp_max, insideTemp_max[0], insideTemp_max[1]);
 	for (int i=0 ; i<2 ; i++)
 		computeMax(values.leafTemp_max[i], leafTemp_max[0][i], leafTemp_max[1][i]);
-	computeMax(values.outsideTemp_max, outsideTemp_max[0], outsideTemp_max[1]);
+	computeMax(values.outsideTemp_max,
+			computeMax(outsideTemp_max[0], real_outsideTemp_max[0]),
+			computeMax(outsideTemp_max[1], real_outsideTemp_max[1])
+		  );
 	for (int i=0 ; i<2 ; i++)
 		computeMax(values.soilTemp_max[i], soilTemp_max[0][i], soilTemp_max[1][i]);
 	for (int i=0 ; i<2 ; i++)
@@ -190,6 +196,7 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 	std::pair<bool, float> insideTemp_min[2];
 	std::pair<bool, float> leafTemp_min[2][2];
 	std::pair<bool, float> outsideTemp_min[2];
+	std::pair<bool, float> real_outsideTemp_min[2];
 	std::pair<bool, float> soilTemp_min[2][4];
 	std::pair<bool, float> extraTemp_min[2][3];
 
@@ -203,6 +210,7 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 			for (int i=0 ; i<2 ; i++)
 				storeCassandraFloat(row, param++,  leafTemp_min[0][i]);
 			storeCassandraFloat(row, param++, outsideTemp_min[0]);
+			storeCassandraFloat(row, param++, real_outsideTemp_min[0]);
 			for (int i=0 ; i<4 ; i++)
 				storeCassandraFloat(row, param++, soilTemp_min[0][i]);
 			for (int i=0 ; i<3 ; i++)
@@ -233,6 +241,7 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 			for (int i=0 ; i<2 ; i++)
 				storeCassandraFloat(row, param++,  leafTemp_min[1][i]);
 			storeCassandraFloat(row, param++, outsideTemp_min[1]);
+			storeCassandraFloat(row, param++, real_outsideTemp_min[1]);
 			for (int i=0 ; i<4 ; i++)
 				storeCassandraFloat(row, param++, soilTemp_min[1][i]);
 			for (int i=0 ; i<3 ; i++)
@@ -247,7 +256,10 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 	computeMin(values.insideTemp_min, insideTemp_min[0], insideTemp_min[1]);
 	for (int i=0 ; i<2 ; i++)
 		computeMin(values.leafTemp_min[i], leafTemp_min[0][i], leafTemp_min[1][i]);
-	computeMin(values.outsideTemp_min, outsideTemp_min[0], outsideTemp_min[1]);
+	computeMin(values.outsideTemp_min,
+			computeMin(outsideTemp_min[0], real_outsideTemp_min[0]),
+			computeMin(outsideTemp_min[1], real_outsideTemp_min[1])
+		);
 	for (int i=0 ; i<2 ; i++)
 		computeMin(values.soilTemp_min[i], soilTemp_min[0][i], soilTemp_min[1][i]);
 	for (int i=0 ; i<2 ; i++)

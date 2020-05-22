@@ -76,6 +76,30 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 	compute(result, op1, op2, [](const T& t1, const T& t2){ return (t1 + t2) / 2; });
 }
 
+template<typename T>
+inline std::pair<bool, T> computeMin(const std::pair<bool, T>& op1, const std::pair<bool, T>& op2)
+{
+	std::pair<bool, T> result;
+	computeMin(result, op1, op2);
+	return result;
+}
+
+template<typename T>
+inline std::pair<bool, T> computeMax(const std::pair<bool, T>& op1, const std::pair<bool, T>& op2)
+{
+	std::pair<bool, T> result;
+	computeMax(result, op1, op2);
+	return result;
+}
+
+template<typename T>
+inline std::pair<bool,T> computeMean(const std::pair<bool, T>& op1, const std::pair<bool, T>& op2)
+{
+	std::pair<bool, T> result;
+	computeMean(result, op1, op2);
+	return result;
+}
+
 	/**
 	 * @brief A handle to the database to insert meteorological measures
 	 *
@@ -178,6 +202,7 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MAX(leaftemp1)      AS leafTemp1_max,"
 				"MAX(leaftemp2)      AS leafTemp2_max,"
 				"MAX(outsidetemp)    AS outsideTemp_max,"
+				"MAX(max_outside_temperature)    AS real_outsideTemp_max,"
 				"MAX(soiltemp1)      AS soilTemp1_max,"
 				"MAX(soiltemp2)      AS soilTemp2_max,"
 				"MAX(soiltemp3)      AS soilTemp3_max,"
@@ -196,6 +221,7 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MAX(leaftemp1)      AS leafTemp1_max,"
 				"MAX(leaftemp2)      AS leafTemp2_max,"
 				"MAX(outsidetemp)    AS outsideTemp_max,"
+				"MAX(max_outside_temperature)    AS real_outsideTemp_max,"
 				"MAX(soiltemp1)      AS soilTemp1_max,"
 				"MAX(soiltemp2)      AS soilTemp2_max,"
 				"MAX(soiltemp3)      AS soilTemp3_max,"
@@ -269,6 +295,7 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MIN(leaftemp1)      AS leafTemp1_min,"
 				"MIN(leaftemp2)      AS leafTemp2_min,"
 				"MIN(outsidetemp)    AS outsideTemp_min,"
+				"MIN(min_outside_temperature)    AS real_outsideTemp_min,"
 				"MIN(soiltemp1)      AS soilTemp1_min,"
 				"MIN(soiltemp2)      AS soilTemp2_min,"
 				"MIN(soiltemp3)      AS soilTemp3_min,"
@@ -285,6 +312,7 @@ inline void computeMean(std::pair<bool, T>& result, const std::pair<bool, T>& op
 				"MIN(leaftemp1)      AS leafTemp1_min,"
 				"MIN(leaftemp2)      AS leafTemp2_min,"
 				"MIN(outsidetemp)    AS outsideTemp_min,"
+				"MIN(min_outside_temperature)    AS real_outsideTemp_min,"
 				"MIN(soiltemp1)      AS soilTemp1_min,"
 				"MIN(soiltemp2)      AS soilTemp2_min,"
 				"MIN(soiltemp3)      AS soilTemp3_min,"

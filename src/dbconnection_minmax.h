@@ -210,7 +210,7 @@ inline std::pair<bool,T> computeMean(const std::pair<bool, T>& op1, const std::p
 				"MAX(extratemp1)     AS extraTemp1_max,"
 				"MAX(extratemp2)     AS extraTemp2_max,"
 				"MAX(extratemp3)     AS extraTemp3_max,"
-				"SUM(rainfall)       AS rainfall,"
+				"meteodata_v2.sum(rainfall)       AS rainfall,"
 				"MAX(rainrate)       AS rainrate_max"
 			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
 				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time >= ?";
@@ -229,7 +229,7 @@ inline std::pair<bool,T> computeMean(const std::pair<bool, T>& op1, const std::p
 				"MAX(extratemp1)     AS extraTemp1_max,"
 				"MAX(extratemp2)     AS extraTemp2_max,"
 				"MAX(extratemp3)     AS extraTemp3_max,"
-				"SUM(rainfall)       AS rainfall,"
+				"meteodata_v2.sum(rainfall)       AS rainfall,"
 				"MAX(rainrate)       AS rainrate_max"
 			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
 				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time < ?";
@@ -280,8 +280,8 @@ inline std::pair<bool,T> computeMean(const std::pair<bool, T>& op1, const std::p
 				"MIN(dewpoint)                AS dewpoint_min,"
 				"MAX(dewpoint)                AS dewpoint_max,"
 				"meteodata_v2.avg(dewpoint)   AS dewpoint_avg,"
-				"SUM(et)                      AS et,"
-				"SUM(insolation_time)         AS insolation_time,"
+				"meteodata_v2.sum(et)                      AS et,"
+				"meteodata_v2.sum(insolation_time)         AS insolation_time,"
 				"rainfall24                   AS rainfall24,"
 				"insolation_time24            AS insolation_time24,"
 				"tx                           AS tx,"

@@ -114,10 +114,10 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"MIN(outsidetemp_min)		AS outsidetemp_min_min, "
 			"meteodata_v2.avg(windspeed_avg) AS wind_avg, "
 			"MAX(windgust_max)		AS windgust_max, "
-			"SUM(dayrain)			AS rainfall, "
+			"meteodata_v2.sum(dayrain)			AS rainfall, "
 			"MAX(dayrain)			AS rainfall_max, "
 			"MAX(rainrate_max)		AS rainrate_max, "
-			"SUM(dayet)			AS etp, "
+			"meteodata_v2.sum(dayet)			AS etp, "
 			"MIN(barometer_min)		AS barometer_min, "
 			"meteodata_v2.avg(barometer_avg) AS barometer_avg, "
 			"MAX(barometer_max)		AS barometer_max, "
@@ -126,7 +126,7 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 			"MAX(solarrad_max)		AS solarrad_max, "
 			"meteodata_v2.avg(solarrad_avg)	AS solarrad_avg, "
 			"MAX(uv_max)			AS uv_max, "
-			"SUM(insolation_time)		AS insolation_time, "
+			"meteodata_v2.sum(insolation_time)		AS insolation_time, "
 			"MAX(insolation_time)		AS insolation_time_max "
 			" FROM meteodata_v2.minmax WHERE station = ? AND monthyear = ?";
 			//" FROM meteodata.minmax WHERE station = ? AND date >= ? AND date < ?";

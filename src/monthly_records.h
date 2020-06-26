@@ -110,6 +110,7 @@ private:
 
 	void updateRecord(DayRecord record, std::function<bool(float,float)> replacement, float value, const std::set<date::sys_days>& date);
 	void updateRecord(MonthRecord record, std::function<bool(float,float)> replacement, float value, int year);
+	void updateCountRecord(MonthRecord record, std::function<bool(int,int)> replacement, int value, int year, int zero = 0);
 
 	void prepareTemperatureRecords(date::year referenceYear, int referenceNbDays);
 	void prepareWindRecords(date::year referenceYear, int referenceNbDays);

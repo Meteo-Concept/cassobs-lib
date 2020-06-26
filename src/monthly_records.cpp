@@ -189,6 +189,28 @@ void MonthlyRecords::updateRecord(MonthRecord record, std::function<bool(float,f
 	}
 }
 
+void MonthlyRecords::updateCountRecord(MonthRecord record, std::function<bool(int,int)> replacement, int value, int year, int zero) {
+	auto monthPos = _monthValues.find(record);
+	if (monthPos != _monthValues.end()) {
+		if (value == zero) { // equalling the absolute minimum is not a big feat...
+			_monthValues[record] = value;
+			_monthDates[record] = { year };
+			_changedMonthValues[record] = true;
+		} if (int((monthPos->second + 0.05) * 10) == int((value + 0.05) * 10)) {
+			_monthDates[record].insert(year);
+			_changedMonthValues[record] = true;
+		} else if (replacement(value, monthPos->second)) {
+			_monthValues[record] = value;
+			_monthDates[record] = { year };
+			_changedMonthValues[record] = true;
+		}
+	} else {
+		_monthValues[record] = value;
+		_monthDates[record] = { year };
+		_changedMonthValues[record] = true;
+	}
+}
+
 void MonthlyRecords::prepareRecords()
 {
 	// sanity tests
@@ -312,13 +334,13 @@ void MonthlyRecords::prepareTemperatureRecords(date::year referenceYear, int ref
 		outsideTempDerived.maxmax, outsideTempDerived.maxmaxDates
 	);
 
-	updateRecord(MonthRecord::OUTSIDE_TEMP_MAX_OVER_30, std::greater<>(),
+	updateCountRecord(MonthRecord::OUTSIDE_TEMP_MAX_OVER_30, std::greater<>(),
 		outsideTempDerived.maxOver30, int(referenceYear)
 	);
-	updateRecord(MonthRecord::OUTSIDE_TEMP_MAX_OVER_25, std::greater<>(),
+	updateCountRecord(MonthRecord::OUTSIDE_TEMP_MAX_OVER_25, std::greater<>(),
 		outsideTempDerived.maxOver25, int(referenceYear)
 	);
-	updateRecord(MonthRecord::OUTSIDE_TEMP_MAX_UNDER_0, std::greater<>(),
+	updateCountRecord(MonthRecord::OUTSIDE_TEMP_MAX_UNDER_0, std::greater<>(),
 		outsideTempDerived.maxUnder0, int(referenceYear)
 	);
 
@@ -338,13 +360,13 @@ void MonthlyRecords::prepareTemperatureRecords(date::year referenceYear, int ref
 		outsideTempDerived.minmax, outsideTempDerived.minmaxDates
 	);
 
-	updateRecord(MonthRecord::OUTSIDE_TEMP_MIN_UNDER_0, std::greater<>(),
+	updateCountRecord(MonthRecord::OUTSIDE_TEMP_MIN_UNDER_0, std::greater<>(),
 		outsideTempDerived.minUnder0, int(referenceYear)
 	);
-	updateRecord(MonthRecord::OUTSIDE_TEMP_MIN_UNDER_MINUS_5, std::greater<>(),
+	updateCountRecord(MonthRecord::OUTSIDE_TEMP_MIN_UNDER_MINUS_5, std::greater<>(),
 		outsideTempDerived.minUnderMinus5, int(referenceYear)
 	);
-	updateRecord(MonthRecord::OUTSIDE_TEMP_MIN_UNDER_MINUS_10, std::greater<>(),
+	updateCountRecord(MonthRecord::OUTSIDE_TEMP_MIN_UNDER_MINUS_10, std::greater<>(),
 		outsideTempDerived.minUnderMinus10, int(referenceYear)
 	);
 
@@ -452,13 +474,13 @@ void MonthlyRecords::prepareRainRecords(date::year referenceYear, int referenceN
 		rainDerived.max, rainDerived.maxDates
 	);
 
-	updateRecord(MonthRecord::DAYRAIN_OVER_1, std::greater<>(),
+	updateCountRecord(MonthRecord::DAYRAIN_OVER_1, std::greater<>(),
 		rainDerived.over1, int(referenceYear)
 	);
-	updateRecord(MonthRecord::DAYRAIN_OVER_5, std::greater<>(),
+	updateCountRecord(MonthRecord::DAYRAIN_OVER_5, std::greater<>(),
 		rainDerived.over5, int(referenceYear)
 	);
-	updateRecord(MonthRecord::DAYRAIN_OVER_10, std::greater<>(),
+	updateCountRecord(MonthRecord::DAYRAIN_OVER_10, std::greater<>(),
 		rainDerived.over10, int(referenceYear)
 	);
 
@@ -498,13 +520,13 @@ void MonthlyRecords::prepareSolarRecords(date::year referenceYear, int reference
 					return carry;
 				});
 
-	updateRecord(MonthRecord::DAYINSOLATION_OVER_1, std::greater<>(),
+	updateCountRecord(MonthRecord::DAYINSOLATION_OVER_1, std::greater<>(),
 		solarDerived.over1, int(referenceYear)
 	);
-	updateRecord(MonthRecord::DAYINSOLATION_OVER_5, std::greater<>(),
+	updateCountRecord(MonthRecord::DAYINSOLATION_OVER_5, std::greater<>(),
 		solarDerived.over5, int(referenceYear)
 	);
-	updateRecord(MonthRecord::DAYINSOLATION_AT_0, std::greater<>(),
+	updateCountRecord(MonthRecord::DAYINSOLATION_AT_0, std::greater<>(),
 		solarDerived.at0, int(referenceYear)
 	);
 

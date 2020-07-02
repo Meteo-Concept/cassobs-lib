@@ -306,7 +306,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectStatICTxtStations,
-			"SELECT station, active, host, url, tz FROM meteodata.statictxt"
+			"SELECT station, active, host, url, https, tz FROM meteodata.statictxt"
 		);
 
 		prepareOneStatement(_selectMBDataTxtStations,
@@ -911,7 +911,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations)
+	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int>>& stations)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectStatICTxtStations.get()),
@@ -943,10 +943,12 @@ namespace meteodata {
 				const char *url;
 				size_t sizeUrl;
 				cass_value_get_string(cass_row_get_column(row,3), &url, &sizeUrl);
+				cass_bool_t https;
+				cass_value_get_bool(cass_row_get_column(row,4), &https);
 				int tz;
-				cass_value_get_int32(cass_row_get_column(row,4), &tz);
+				cass_value_get_int32(cass_row_get_column(row,5), &tz);
 				if (active == cass_true)
-					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, tz);
+					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz);
 			}
 			ret = true;
 		}

@@ -305,6 +305,10 @@ namespace meteodata {
 			"SELECT station, active, host, port, user, password, topic, tz FROM meteodata.mqtt"
 		);
 
+		prepareOneStatement(_selectFieldClimateApiStations,
+			"SELECT station, active, fieldclimate_id, sensors, tz FROM meteodata.fieldclimate"
+		);
+
 		prepareOneStatement(_selectStatICTxtStations,
 			"SELECT station, active, host, url, https, tz FROM meteodata.statictxt"
 		);
@@ -1068,6 +1072,66 @@ namespace meteodata {
 				size_t icaoLength;
 				cass_value_get_string(cass_row_get_column(row,1), &icaoStr, &icaoLength);
 				stations.emplace_back(station, std::string{icaoStr, icaoLength});
+			}
+			ret = true;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getAllFieldClimateApiStations(std::vector<std::tuple<CassUuid, std::string, int, std::map<std::string, std::string>>>& stations)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectFieldClimateApiStations.get()),
+			cass_statement_free
+		};
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+		bool ret = false;
+		if (result) {
+			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+				cass_iterator_from_result(result.get()),
+				cass_iterator_free
+			};
+			while (cass_iterator_next(iterator.get())) {
+				const CassRow* row = cass_iterator_get_row(iterator.get());
+				CassUuid station;
+				cass_value_get_uuid(cass_row_get_column(row,0), &station);
+				cass_bool_t active;
+				cass_value_get_bool(cass_row_get_column(row,1), &active);
+				const char *fieldClimateId;
+				size_t sizeFieldClimateId;
+				cass_value_get_string(cass_row_get_column(row,2), &fieldClimateId, &sizeFieldClimateId);
+
+				std::map<std::string, std::string> sensors;
+				const CassValue* mappingValue = cass_row_get_column(row, 3);
+				if (!cass_value_is_null(mappingValue)) {
+					std::unique_ptr<CassIterator, void(&)(CassIterator*)> mappingIterator{
+						cass_iterator_from_map(mappingValue),
+						cass_iterator_free
+					};
+					while (cass_iterator_next(mappingIterator.get())) {
+						const char *variable;
+						size_t sizeVariable;
+						cass_value_get_string(cass_iterator_get_map_key(mappingIterator.get()), &variable, &sizeVariable);
+
+						const char *sensor;
+						size_t sizeSensor;
+						cass_value_get_string(cass_iterator_get_map_value(mappingIterator.get()), &sensor, &sizeSensor);
+						sensors.emplace(std::string{variable, sizeVariable}, std::string{sensor, sizeSensor});
+					}
+				}
+
+				int tz;
+				cass_value_get_int32(cass_row_get_column(row,4), &tz);
+				if (active == cass_true)
+					stations.emplace_back(station, std::string{fieldClimateId, sizeFieldClimateId}, tz, sensors);
 			}
 			ret = true;
 		}

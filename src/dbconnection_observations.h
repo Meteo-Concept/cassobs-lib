@@ -348,6 +348,25 @@ namespace meteodata {
 		 * @return True if everything went well, false if an error occurred.
 		 */
 		bool getMBDataTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int, std::string>>& stations);
+
+		/**
+		 * @brief Get FieldClimate connection information for all the stations we retrieve the
+		 * data from using the FieldClimate API by Pessl
+		 *
+		 * Each station is associated to a tuple (UUID,fieldclimateId,
+		 * tz, sensors) where 'UUID' is the identifier of the station,
+		 * 'fieldclimate_id' is the identifier for the station in the
+		 * FieldClimate API, 'tz' is the identifier of the timezone the
+		 * station is configured with, and 'sensors' is a map between
+		 * variables and sensors identifiers indicating which part of
+		 * the data in the API returned results must be parsed.
+		 *
+		 * @param[out] stations A vector of tuple (UUID, fieldclimateId, tz, sensors)
+		 *
+		 * @return True if everything went well, false if an error occurred
+		 */
+		bool getAllFieldClimateApiStations(std::vector<std::tuple<CassUuid, std::string, int, std::map<std::string, std::string>>>& stations);
+
 		/**
 		 * @brief Get the total rainfall between two datetimes for a station
 		 *
@@ -458,6 +477,11 @@ namespace meteodata {
 		 * getMBDataTxtStations() method
 		 */
 		CassandraStmtPtr _selectMBDataTxtStations;
+		/**
+		 * @brief The prepared statement for the
+		 * getFieldClimateApiStations() method
+		 */
+		CassandraStmtPtr _selectFieldClimateApiStations;
 		/**
 		 * @brief The prepared statement for the getRainfall() method
 		 */

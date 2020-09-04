@@ -34,9 +34,9 @@ libcassobs_la_SOURCES = \
 libcassobs_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CPPFLAGS) $(DATE_CPPFLAGS) $(MYSQL_CPPFLAGS)
 libcassobs_la_CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
 libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(MYSQL_LIBS)
-libcassobs_la_LDFLAGS = -version-info 1:0:0
+libcassobs_la_LDFLAGS = -version-info 1:1:0
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_normals
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = \
@@ -56,6 +56,12 @@ get_wlv2_stations_SOURCES = \
 get_wlv2_stations_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
 get_wlv2_stations_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
 get_wlv2_stations_LDADD = libcassobs.la $(libcassobs_la_LIBADD)
+
+get_fieldclimate_stations_SOURCES = \
+			tests/get_fieldclimate_stations.cpp
+get_fieldclimate_stations_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
+get_fieldclimate_stations_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
+get_fieldclimate_stations_LDADD = libcassobs.la $(libcassobs_la_LIBADD)
 
 get_rainfall_SOURCES = \
 			tests/get_rainfall.cpp

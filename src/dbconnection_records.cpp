@@ -138,12 +138,10 @@ bool DbConnectionRecords::getCurrentRecords(const CassUuid& station, date::month
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectCurrentRecords.get());
 
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, station);
 	unsigned int m = unsigned(month);
 	cass_statement_bind_int32(statement, 1, m);
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	values.setMonth(month);
@@ -267,12 +265,9 @@ bool DbConnectionRecords::getValuesForAllDaysInMonth(const CassUuid& uuid, int y
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectValuesForAllDaysInMonth.get());
 
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
-	std::cerr << "Period of interest: " << (year * 100 + month) << std::endl;
 	cass_statement_bind_int32(statement, 1, year * 100 + month);
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	const CassResult* result = cass_future_get_result(query);
@@ -308,11 +303,8 @@ bool DbConnectionRecords::getValuesForAllDaysInMonth(const CassUuid& uuid, int y
 bool DbConnectionRecords::insertDataPoint(const CassUuid& station, MonthlyRecords& values)
 {
 	CassFuture* query;
-	std::cerr << "About to insert data point in database" << std::endl;
 	CassStatement* statement = cass_prepared_bind(_insertDataPoint.get());
-	std::cerr << "statement: " << statement << std::endl;
 	values.populateRecordInsertionQuery(statement, station);
-	std::cerr << "statement populated" << std::endl;
 	query = cass_session_execute(_session.get(), statement);
 	cass_statement_free(statement);
 
@@ -322,7 +314,6 @@ bool DbConnectionRecords::insertDataPoint(const CassUuid& station, MonthlyRecord
 		const char* error_message;
 		size_t error_message_length;
 		cass_future_error_message(query, &error_message, &error_message_length);
-		std::cerr << "Error from Cassandra: " << error_message << std::endl;
 		ret = false;
 		cass_result_free(result);
 	}

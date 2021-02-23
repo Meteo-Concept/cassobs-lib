@@ -108,7 +108,6 @@ class DbConnectionCommon
 		{
 			const CassValue* raw = cass_row_get_column(row, column);
 			if (cass_value_is_null(raw)) {
-				//	std::cerr << "Detected an int null value at column " << column << std::endl;
 				value.first = false;
 			} else {
 				value.first = true;
@@ -129,7 +128,6 @@ class DbConnectionCommon
 		{
 			const CassValue* raw = cass_row_get_column(row, column);
 			if (cass_value_is_null(raw)) {
-				//	std::cerr << "Detected a float null value as column " << column << std::endl;
 				value.first = false;
 			} else {
 				value.first = true;

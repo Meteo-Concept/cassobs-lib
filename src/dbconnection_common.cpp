@@ -90,9 +90,7 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 {
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectAllStations.get());
-	std::cerr << "Statement prepared" << std::endl;
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	const CassResult* result = cass_future_get_result(query);
@@ -115,9 +113,7 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 		return ret;
 
 	statement = cass_prepared_bind(_selectAllStationsFr.get());
-	std::cerr << "Statement prepared" << std::endl;
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	result = cass_future_get_result(query);
@@ -141,7 +137,6 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 
 bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
 {
-	std::cerr << "About to execute statement getStationDetails" << std::endl;
 	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 		cass_prepared_bind(_selectStationDetails.get()),
 		cass_statement_free
@@ -178,7 +173,6 @@ bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& na
 
 bool DbConnectionCommon::getStationLocation(const CassUuid& uuid, float& latitude, float& longitude, int& elevation)
 {
-	std::cerr << "About to execute statement getStationLocation" << std::endl;
 	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 		cass_prepared_bind(_selectStationLocation.get()),
 		cass_statement_free
@@ -211,11 +205,9 @@ bool DbConnectionCommon::getWindValues(const CassUuid& uuid, const date::sys_day
 {
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectWindValues.get());
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date));
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	bool ret = false;
@@ -235,7 +227,6 @@ bool DbConnectionCommon::getWindValues(const CassUuid& uuid, const date::sys_day
 	cass_result_free(result);
 	cass_future_free(query);
 
-	std::cerr << "Saved wind values" << std::endl;
 
 	return ret;
 }

@@ -183,7 +183,6 @@ std::vector<Neighbor> DbConnectionNormals::getStationsWithNormalsNearby(const Ca
 
 		neighbors.push_back(std::move(st));
 	}
-	std::cerr << "Found " << neighbors.size() << " neighbours" << std::endl;
 
 	if (mysql_stmt_free_result(stmt))
 		panic("Cannot free result of statement \"getStationsWithNormalsNearby\"");

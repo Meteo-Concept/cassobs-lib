@@ -71,13 +71,11 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 {
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectValuesAfter6h.get());
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date));
 	auto morning = date + chrono::hours(6);
 	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(morning));
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	std::pair<bool, float> insideTemp_max[2];
@@ -130,13 +128,11 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 	}
 
 	statement = cass_prepared_bind(_selectValuesBefore6h.get());
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date + date::days(1)));
 	auto nextMorning = date + date::days(1) + chrono::hours(6);
 	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(nextMorning));
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	result = cass_future_get_result(query);
@@ -184,13 +180,11 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 {
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectValuesAfter18h.get());
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date - date::days(1)));
 	auto previousEvening = date - date::days(1) + chrono::hours(18);
 	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(previousEvening));
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	std::pair<bool, float> insideTemp_min[2];
@@ -222,13 +216,11 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 	cass_future_free(query);
 
 	statement = cass_prepared_bind(_selectValuesBefore18h.get());
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date));
 	auto evening = date + chrono::hours(18);
 	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(evening));
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	result = cass_future_get_result(query);
@@ -272,7 +264,6 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 {
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectValuesAllDay.get());
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 //	cass_statement_bind_int64(statement, 1, date::sys_time<chrono::milliseconds>(date).time_since_epoch().count());
 //	cass_statement_bind_int64(statement, 2, date::sys_time<chrono::milliseconds>(date + date::days(1)).time_since_epoch().count());
@@ -283,7 +274,6 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 //	cass_statement_bind_int64(statement, 3, previousEvening.time_since_epoch().count());
 //	cass_statement_bind_int64(statement, 4, evening.time_since_epoch().count());
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	const CassResult* result = cass_future_get_result(query);
@@ -378,13 +368,11 @@ bool DbConnectionMinmax::getYearlyValues(const CassUuid& uuid, const date::sys_d
 {
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectYearlyValues.get());
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 	year_month_day ymd{date};
 	cass_statement_bind_int32(statement, 1, int(ymd.year()) * 100 + unsigned(ymd.month()));
 	cass_statement_bind_uint32(statement, 2,from_sysdays_to_CassandraDate(date));
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	const CassResult* result = cass_future_get_result(query);
@@ -406,7 +394,6 @@ bool DbConnectionMinmax::getYearlyValues(const CassUuid& uuid, const date::sys_d
 bool DbConnectionMinmax::insertDataPoint(const CassUuid& station, const date::sys_days& date, const Values& values)
 {
 	CassFuture* query;
-	std::cerr << "About to insert data point in database" << std::endl;
 	CassStatement* statement = cass_prepared_bind(_insertDataPoint.get());
 	int param = 0;
 	auto ymd = year_month_day{date};
@@ -486,7 +473,6 @@ bool DbConnectionMinmax::insertDataPoint(const CassUuid& station, const date::sy
 		const char* error_message;
 		size_t error_message_length;
 		cass_future_error_message(query, &error_message, &error_message_length);
-		std::cerr << "Error from Cassandra: " << error_message << std::endl;
 		ret = false;
 		cass_result_free(result);
 	}

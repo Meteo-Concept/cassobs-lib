@@ -61,11 +61,9 @@ bool DbConnectionMonthMinmax::getDailyValues(const CassUuid& uuid, int year, int
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectDailyValues.get());
 
-	std::cerr << "Statement prepared" << std::endl;
 	cass_statement_bind_uuid(statement, 0, uuid);
 	cass_statement_bind_int32(statement, 1, year * 100 + month);
 	query = cass_session_execute(_session.get(), statement);
-	std::cerr << "Executed statement" << std::endl;
 	cass_statement_free(statement);
 
 	const CassResult* result = cass_future_get_result(query);
@@ -100,7 +98,6 @@ bool DbConnectionMonthMinmax::getDailyValues(const CassUuid& uuid, int year, int
 	}
 	cass_result_free(result);
 	cass_future_free(query);
-	std::cerr << "Saved daily values" << std::endl;
 
 	return ret;
 }
@@ -109,7 +106,6 @@ bool DbConnectionMonthMinmax::getDailyValues(const CassUuid& uuid, int year, int
 bool DbConnectionMonthMinmax::insertDataPoint(const CassUuid& station, int year, int month, const Values& values)
 {
 	CassFuture* query;
-	std::cerr << "About to insert data point in database" << std::endl;
 	CassStatement* statement = cass_prepared_bind(_insertDataPoint.get());
 	int param = 0;
 	cass_statement_bind_uuid(statement,  param++, station);
@@ -151,7 +147,6 @@ bool DbConnectionMonthMinmax::insertDataPoint(const CassUuid& station, int year,
 		const char* error_message;
 		size_t error_message_length;
 		cass_future_error_message(query, &error_message, &error_message_length);
-		std::cerr << "Error from Cassandra: " << error_message << std::endl;
 		ret = false;
 		cass_result_free(result);
 	}

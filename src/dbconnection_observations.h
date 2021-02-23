@@ -368,6 +368,23 @@ namespace meteodata {
 		bool getAllFieldClimateApiStations(std::vector<std::tuple<CassUuid, std::string, int, std::map<std::string, std::string>>>& stations);
 
 		/**
+		 * @brief Get Objenious SPOT connection information for all the stations we retrieve the
+		 * data from using the Objenious SPOT platform API by Bouygues
+		 *
+		 * Each station is associated to a tuple (UUID,objeniousId,
+		 * sensors) where 'UUID' is the identifier of the station,
+		 * 'fieldclimate_id' is the identifier for the station in the
+		 * FieldClimate API, and 'variables' is a map between
+		 * variables and variables identifiers indicating which part of
+		 * the data in the API returned results must be parsed.
+		 *
+		 * @param[out] stations A vector of tuple (UUID, objeniousId, variables)
+		 *
+		 * @return True if everything went well, false if an error occurred
+		 */
+		bool getAllObjeniousApiStations(std::vector<std::tuple<CassUuid, std::string, std::map<std::string, std::string>>>& stations);
+
+		/**
 		 * @brief Get the total rainfall between two datetimes for a station
 		 *
 		 * @param[in] station The station UUID
@@ -482,6 +499,11 @@ namespace meteodata {
 		 * getFieldClimateApiStations() method
 		 */
 		CassandraStmtPtr _selectFieldClimateApiStations;
+		/**
+		 * @brief The prepared statement for the
+		 * getObjeniousApiStations() method
+		 */
+		CassandraStmtPtr _selectObjeniousApiStations;
 		/**
 		 * @brief The prepared statement for the getRainfall() method
 		 */

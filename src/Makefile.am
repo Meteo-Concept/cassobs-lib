@@ -36,7 +36,7 @@ libcassobs_la_CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
 libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(MYSQL_LIBS)
 libcassobs_la_LDFLAGS = -version-info 1:1:0
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = \
@@ -80,3 +80,9 @@ compute_records_SOURCES = \
 compute_records_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
 compute_records_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
 compute_records_LDADD = libcassobs.la $(libcassobs_la_LIBADD)
+
+get_objenious_stations_SOURCES = \
+			tests/get_objenious_stations.cpp
+get_objenious_stations_CPPFLAGS = $(libcassobs_la_CPPFLAGS)
+get_objenious_stations_CXXFLAGS = $(libcassobs_la_CXXFLAGS)
+get_objenious_stations_LDADD = libcassobs.la $(libcassobs_la_LIBADD)

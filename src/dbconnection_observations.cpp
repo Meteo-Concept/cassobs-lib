@@ -180,7 +180,8 @@ namespace meteodata {
 			"windchill,"
 			"winddir, windgust, windspeed,"
 			"insolation_time,"
-			"min_outside_temperature, max_outside_temperature) "
+			"min_outside_temperature, max_outside_temperature,"
+			"leafwetnesses_timeratio1) "
 			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
@@ -204,7 +205,8 @@ namespace meteodata {
 			"?,"		// "windchill,"
 			"?, ?, ?,"	// "winddir, windgust, windspeed,"
 			"?,"		// "insolation_time"
-			"?,?)"		// "min_outside_temperature, max_outside_temperature"
+			"?,?,"		// "min_outside_temperature, max_outside_temperature"
+			"?)"		// "leafwetnesses_timeratio1"
 		);
 
 		prepareOneStatement(_insertEntireDayValuesInNewDB,
@@ -337,7 +339,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getLastDataInsertionTime(const CassUuid& uuid, time_t& lastDataInsertionTime)
 	{
-		std::cerr << "About to execute statement getLastDataInsertionTime" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectLastDataInsertionTime.get()),
 			cass_statement_free
@@ -359,7 +360,6 @@ namespace meteodata {
 			if (row) {
 				cass_int64_t insertionTimeMillisec;
 				cass_value_get_int64(cass_row_get_column(row,0), &insertionTimeMillisec);
-				std::cerr << "Last insertion was at " << insertionTimeMillisec << std::endl;
 				lastDataInsertionTime = insertionTimeMillisec / 1000;
 			} else {
 				lastDataInsertionTime = 0;
@@ -371,7 +371,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
 	{
-		std::cerr << "About to execute statement getLastDataBefore" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectLastDataBefore.get()),
 			cass_statement_free
@@ -396,7 +395,6 @@ namespace meteodata {
 				const CassValue* value = cass_row_get_column(row, 0);
 				CassUuid u;
 				cass_value_get_uuid(value, &u);
-				//std::cerr << "We have a UUID" << std::endl;
 				obs.setStation(u);
 				// Discard the date, and deal only with the timestamp
 				value = cass_row_get_column(row, 2);
@@ -415,7 +413,6 @@ namespace meteodata {
 					value = cass_row_get_column_by_name(row, var);
 					if (!cass_value_is_null(value)) {
 						float f;
-						//std::cerr << "We have variable " << var << std::endl;
 						cass_value_get_float(value, &f);
 						obs.set(var, f);
 					}
@@ -429,7 +426,6 @@ namespace meteodata {
 					value = cass_row_get_column_by_name(row, var);
 					if (!cass_value_is_null(value)) {
 						cass_int32_t i;
-						//std::cerr << "We have variable " << var << std::endl;
 						cass_value_get_int32(value, &i);
 						obs.set(var, i);
 					}
@@ -442,7 +438,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime)
 	{
-		std::cerr << "About to execute statement getStationByCoords" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectStationByCoords.get()),
 			cass_statement_free
@@ -475,7 +470,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getStationCoordinates(CassUuid station, float& latitude, float& longitude, int& elevation, std::string& name, int& pollPeriod)
 	{
-		std::cerr << "About to execute statement getStationCoordinates" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectStationCoordinates.get()),
 			cass_statement_free
@@ -510,7 +504,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::insertDataPoint(const CassUuid station, const Message& msg)
 	{
-		std::cerr << "About to insert data point in database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_insertDataPoint.get()),
 			cass_statement_free
@@ -530,7 +523,6 @@ namespace meteodata {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -539,7 +531,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::insertV2DataPoint(const CassUuid station, const Message& msg)
 	{
-		std::cerr << "About to insert data point in database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_insertDataPointInNewDB.get()),
 			cass_statement_free
@@ -559,7 +550,6 @@ namespace meteodata {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -568,7 +558,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24)
 	{
-		std::cerr << "About to insert entire day values in database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_insertEntireDayValuesInNewDB.get()),
 			cass_statement_free
@@ -594,7 +583,6 @@ namespace meteodata {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -622,7 +610,6 @@ namespace meteodata {
 		if (oldTx.first && tx <= oldTx.second)
 			return true;
 
-		std::cerr << "About to insert Tx value in database" << std::endl;
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(correctedTime));
 		cass_statement_bind_int64(statement.get(), 2, correctedTime * 1000);
@@ -641,7 +628,6 @@ namespace meteodata {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -669,7 +655,6 @@ namespace meteodata {
 		if (oldTn.first && tn >= oldTn.second)
 			return true;
 
-		std::cerr << "About to insert Tn value in database" << std::endl;
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(correctedTime));
 		cass_statement_bind_int64(statement.get(), 2, correctedTime * 1000);
@@ -688,7 +673,6 @@ namespace meteodata {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -697,7 +681,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::insertMonitoringDataPoint(const CassUuid station, const Message& msg)
 	{
-		std::cerr << "About to insert reconstructed data point in database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_insertDataPointInMonitoringDB.get()),
 			cass_statement_free
@@ -717,7 +700,6 @@ namespace meteodata {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -726,7 +708,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::updateLastArchiveDownloadTime(const CassUuid station, const time_t& time)
 	{
-		std::cerr << "About to update an archive download time in database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_updateLastArchiveDownloadTime.get()),
 			cass_statement_free
@@ -734,24 +715,20 @@ namespace meteodata {
 		cass_statement_bind_int64(statement.get(), 0, time * 1000);
 		cass_statement_bind_uuid(statement.get(), 1, station);
 
-		std::cerr << "	Parameters bound in query" << std::endl;
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 			cass_session_execute(_session.get(), statement.get()),
 			cass_future_free
 		};
-		std::cerr << "	Query sent" << std::endl;
 		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
 			cass_future_get_result(query.get()),
 			cass_result_free
 		};
-		std::cerr << "	Result acquired" << std::endl;
 
 		bool ret = true;
 		if (!result) {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -1141,7 +1118,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getRainfall(const CassUuid& station, time_t begin, time_t end, float& rainfall)
 	{
-		std::cerr << "About to execute statement getRainfall" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_getRainfall.get()),
 			cass_statement_free
@@ -1187,7 +1163,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::deleteDataPoints(const CassUuid& station, const date::sys_days& day, const date::sys_seconds& start, const date::sys_seconds& end)
 	{
-		std::cerr << "About to delete records from the database" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_deleteDataPoints.get()),
 			cass_statement_free
@@ -1211,7 +1186,6 @@ namespace meteodata {
 			const char* error_message;
 			size_t error_message_length;
 			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			std::cerr << "Error from Cassandra: " << error_message << std::endl;
 			ret = false;
 		}
 
@@ -1220,7 +1194,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getTx(const CassUuid& station, time_t boundary, std::pair<bool, float>& value)
 	{
-		std::cerr << "About to execute statement getTx" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectTx.get()),
 			cass_statement_free
@@ -1259,7 +1232,6 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getTn(const CassUuid& station, time_t boundary, std::pair<bool, float>& value)
 	{
-		std::cerr << "About to execute statement getTn" << std::endl;
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectTn.get()),
 			cass_statement_free

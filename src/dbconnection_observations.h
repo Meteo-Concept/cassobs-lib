@@ -74,11 +74,10 @@ namespace meteodata {
 		 * @param[out] name The common name given to the station
 		 * @param[out] pollPeriod The period of time between two measurements from the station
 		 * @param[out] lastArchiveDownloadTime The timestamp of the last archive entry downloaded from the station (in station's time)
-		 * @param[out] lastDataInsertionTime The timestamp of the last data from the station inserted into the database
 		 *
 		 * @return The boolean value true if everything went well, false if an error occurred
 		 */
-		bool getStationByCoords(int latitude, int longitude, int altitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime);
+		bool getStationByCoords(int latitude, int longitude, int altitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime);
 
 		/**
 		 * @brief Get the coordinates of a station
@@ -244,19 +243,6 @@ namespace meteodata {
 		 * false otherwise.
 		 */
 		bool updateLastArchiveDownloadTime(const CassUuid station, const time_t& time);
-		/**
-		 * @brief Identify the last time data was retrieved from a
-		 * station
-		 *
-		 * @param station The station of interest
-		 * @param[out] lastDataInsertionTime The timestamp of the last
-		 * entry corresponding to the database
-		 *
-		 * @return True if everything went well and
-		 * lastDataInsertionTime is the expected result, false if the
-		 * query failed
-		 */
-		bool getLastDataInsertionTime(const CassUuid& station, time_t& lastDataInsertionTime);
 		/**
 		 * @brief Fetch the latest datapoint before some datetime
 		 *
@@ -441,25 +427,21 @@ namespace meteodata {
 		 */
 		CassandraStmtPtr _selectLastDataBefore;
 		/**
-		 * @brief The prepared statement for the insertDataPoint() method
-		 */
-		CassandraStmtPtr _insertDataPoint;
-		/**
 		 * @brief The prepared statement for the insertV2DataPoint() method
 		 */
-		CassandraStmtPtr _insertDataPointInNewDB;
+		CassandraStmtPtr _insertV2DataPoint;
 		/**
 		 * @brief The prepared statement for the insertV2EntireDayValues() method
 		 */
-		CassandraStmtPtr _insertEntireDayValuesInNewDB;
+		CassandraStmtPtr _insertEntireDayValues;
 		/**
 		 * @brief The prepared statement for the insertV2Tx() method
 		 */
-		CassandraStmtPtr _insertTxInNewDB;
+		CassandraStmtPtr _insertTx;
 		/**
 		 * @brief The prepared statement for the insertV2Tn() method
 		 */
-		CassandraStmtPtr _insertTnInNewDB;
+		CassandraStmtPtr _insertTn;
 		/**
 		 * @brief The prepared statement for the insertMonitoringDataPoint() method
 		 */

@@ -65,10 +65,6 @@ namespace meteodata {
 			"SELECT uuid,icao FROM meteodata.deferred_synops"
 		);
 
-		prepareOneStatement(_selectLastDataInsertionTime,
-			"SELECT time FROM meteodata.meteo WHERE station = ? LIMIT 1"
-		);
-
 		prepareOneStatement(_selectLastDataBefore,
 			"SELECT "
 			"station,"
@@ -97,66 +93,7 @@ namespace meteodata {
 			" AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1"
 		);
 
-		prepareOneStatement(_insertDataPoint,
-			"INSERT INTO meteodata.meteo ("
-			"station,"
-			"time,"
-			"bartrend,barometer,barometer_abs,barometer_raw,"
-			"insidetemp,outsidetemp,"
-			"insidehum,outsidehum,"
-			"extratemp1,extratemp2, extratemp3,extratemp4,"
-				"extratemp5, extratemp6,extratemp7,"
-			"soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
-			"leaftemp1, leaftemp2, leaftemp3, leaftemp4,"
-			"extrahum1, extrahum2, extrahum3, extrahum4,"
-				"extrahum5, extrahum6, extrahum7,"
-			"soilmoistures1, soilmoistures2, soilmoistures3,"
-				"soilmoistures4,"
-			"leafwetnesses1, leafwetnesses2, leafwetnesses3,"
-				"leafwetnesses4,"
-			"windspeed, winddir,"
-			"avgwindspeed_10min, avgwindspeed_2min,"
-			"windgust_10min, windgustdir,"
-			"rainrate, rain_15min, rain_1h, rain_24h,"
-			"dayrain, monthrain, yearrain,"
-			"stormrain, stormstartdate,"
-			"UV, solarrad,"
-			"dewpoint, heatindex, windchill, thswindex,"
-			"dayET, monthET, yearET,"
-			"forecast, forecast_icons,"
-			"sunrise, sunset,"
-			"rain_archive, etp_archive)"
-			"VALUES ("
-			"?,"			// "station,"
-			"?,"			// "time,"
-			"?,?,?,?,"		// "bartrend,barometer,barometer_abs,barometer_raw,"
-			"?,?,"			// "insidetemp,outsidetemp,"
-			"?,?,"			// "insidehum,outsidehum,"
-			"?,?,?,?,"		// "extratemp1,extratemp2, extratemp3,extratemp4,"
-				"?,?,?,"	// 	"extratemp5, extratemp6,extratemp7,"
-			"?,?,?,?,"		// "soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
-			"?,?,?,?,"		// "leaftemp1, leaftemp2, leaftemp3, leaftemp4,"
-			"?,?,?,?,"		// "extrahum1, extrahum2, extrahum3, extrahum4,"
-				"?,?,?,"	// 	"extrahum5, extrahum6, extrahum7,"
-			"?,?,?,"		// "soilmoistures1, soilmoistures2, soilmoistures3,"
-				"?,"		// 	"soilmoistures4,"
-			"?,?,?,"		// "leafwetnesses1, leafwetnesses2, leafwetnesses3,"
-				"?,"		// 	"leafwetnesses4,"
-			"?,?,"			// "windspeed, winddir,"
-			"?,?,"			// "avgwindspeed_10min, avgwindspeed_2min,"
-			"?,?,"			// "windgust_10min, windgustdir,"
-			"?,?,?,?,"		// "rainrate, rain_15min, rain_1h, rain_24h,"
-			"?,?,?,"		// "dayrain, monthrain, yearrain,"
-			"?,?,"			// "stormrain, stormstartdate,"
-			"?,?,"			// "UV, solarrad,"
-			"?,?,?,?,"		// "dewpoint, heatindex, windchill, thswindex,"
-			"?,?,?,"		// "dayET, monthET, yearET,"
-			"?,?,"			// "forecast, forecast_icons,"
-			"?,?,"			// "sunrise, sunset,"
-			"?,?)"			// "rain_archive, etp_archive,"
-		);
-
-		prepareOneStatement(_insertDataPointInNewDB,
+		prepareOneStatement(_insertV2DataPoint,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -209,7 +146,7 @@ namespace meteodata {
 			"?)"		// "leafwetnesses_timeratio1"
 		);
 
-		prepareOneStatement(_insertEntireDayValuesInNewDB,
+		prepareOneStatement(_insertEntireDayValues,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -220,7 +157,7 @@ namespace meteodata {
 			"?, ?)"		// "rainfall24, insolation_time24)"
 		);
 
-		prepareOneStatement(_insertTxInNewDB,
+		prepareOneStatement(_insertTx,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -231,7 +168,7 @@ namespace meteodata {
 			"?)"		// "tx"
 		);
 
-		prepareOneStatement(_insertTnInNewDB,
+		prepareOneStatement(_insertTn,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
 			"day, time,"
@@ -341,38 +278,6 @@ namespace meteodata {
 		);
 	}
 
-	bool DbConnectionObservations::getLastDataInsertionTime(const CassUuid& uuid, time_t& lastDataInsertionTime)
-	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectLastDataInsertionTime.get()),
-			cass_statement_free
-		};
-		cass_statement_bind_uuid(statement.get(), 0, uuid);
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-
-		bool ret = false;
-		if (result) {
-			const CassRow* row = cass_result_first_row(result.get());
-			ret = true;
-			if (row) {
-				cass_int64_t insertionTimeMillisec;
-				cass_value_get_int64(cass_row_get_column(row,0), &insertionTimeMillisec);
-				lastDataInsertionTime = insertionTimeMillisec / 1000;
-			} else {
-				lastDataInsertionTime = 0;
-			}
-		}
-
-		return ret;
-	}
-
 	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
@@ -440,7 +345,7 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, time_t& lastDataInsertionTime)
+	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectStationByCoords.get()),
@@ -464,8 +369,6 @@ namespace meteodata {
 			if (row) {
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				ret = getStationDetails(station, name, pollPeriod, lastArchiveDownloadTime);
-				if (ret)
-					getLastDataInsertionTime(station, lastDataInsertionTime);
 			}
 		}
 
@@ -506,37 +409,10 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnectionObservations::insertDataPoint(const CassUuid station, const Message& msg)
-	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_insertDataPoint.get()),
-			cass_statement_free
-		};
-		msg.populateDataPoint(station, statement.get());
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-
-		bool ret = true;
-		if (!result) {
-			const char* error_message;
-			size_t error_message_length;
-			cass_future_error_message(query.get(), &error_message, &error_message_length);
-			ret = false;
-		}
-
-		return ret;
-	}
-
 	bool DbConnectionObservations::insertV2DataPoint(const CassUuid station, const Message& msg)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_insertDataPointInNewDB.get()),
+			cass_prepared_bind(_insertV2DataPoint.get()),
 			cass_statement_free
 		};
 		msg.populateV2DataPoint(station, statement.get());
@@ -563,7 +439,7 @@ namespace meteodata {
 	bool DbConnectionObservations::insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_insertEntireDayValuesInNewDB.get()),
+			cass_prepared_bind(_insertEntireDayValues.get()),
 			cass_statement_free
 		};
 		cass_statement_bind_uuid(statement.get(), 0, station);
@@ -596,7 +472,7 @@ namespace meteodata {
 	bool DbConnectionObservations::insertV2Tx(const CassUuid station, const time_t& time, float tx)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_insertTxInNewDB.get()),
+			cass_prepared_bind(_insertTx.get()),
 			cass_statement_free
 		};
 
@@ -641,7 +517,7 @@ namespace meteodata {
 	bool DbConnectionObservations::insertV2Tn(const CassUuid station, const time_t& time, float tn)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_insertTnInNewDB.get()),
+			cass_prepared_bind(_insertTn.get()),
 			cass_statement_free
 		};
 

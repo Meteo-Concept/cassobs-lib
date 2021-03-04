@@ -999,7 +999,7 @@ namespace meteodata {
 	bool DbConnectionObservations::getAllObjeniousApiStations(std::vector<std::tuple<CassUuid, std::string, std::map<std::string, std::string>>>& stations)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectFieldClimateApiStations.get()),
+			cass_prepared_bind(_selectObjeniousApiStations.get()),
 			cass_statement_free
 		};
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{

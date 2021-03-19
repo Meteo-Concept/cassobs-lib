@@ -256,6 +256,8 @@ class DbConnectionCommon
 		 */
 		void prepareOneStatement(CassandraStmtPtr& stmt, const std::string& query);
 
+		bool performSelect(const CassPrepared* stmt, const std::function<void(const CassRow*)>& rowHandler);
+
 	private:
 		/**
 		 * @brief The raw query string to select all stations from the database

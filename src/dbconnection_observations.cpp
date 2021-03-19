@@ -617,26 +617,8 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getAllWeatherlinkStations(std::vector<std::tuple<CassUuid, std::string, std::string, int>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectWeatherlinkStations.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectWeatherlinkStations.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				cass_bool_t active;
@@ -657,34 +639,13 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{authString, sizeAuthString}, apiToken, timezone);
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::map<int, CassUuid>, std::string>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectWeatherlinkAPIv2Stations.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectWeatherlinkAPIv2Stations.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				cass_bool_t active;
@@ -713,34 +674,13 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, mapping, std::string{weatherlinkId, sizeWeatherlinkId});
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getMqttStations(std::vector<std::tuple<CassUuid, std::string, int, std::string, std::unique_ptr<char[]>, size_t, std::string, int>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectMqttStations.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectMqttStations.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				cass_bool_t active;
@@ -766,34 +706,13 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{host, sizeHost}, port, std::string{user, sizeUser}, std::move(pwCopy), sizePw, std::string{topic, sizeTopic}, tz);
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectStatICTxtStations.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectStatICTxtStations.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				cass_bool_t active;
@@ -811,34 +730,13 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz);
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getMBDataTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int, std::string>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectMBDataTxtStations.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectMBDataTxtStations.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				cass_bool_t active;
@@ -859,34 +757,13 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz, std::string{type, sizeType});
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getAllIcaos(std::vector<std::tuple<CassUuid, std::string>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectAllIcaos.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectAllIcaos.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				const char *icaoStr;
@@ -895,34 +772,13 @@ namespace meteodata {
 				if (icaoLength != 0)
 					stations.emplace_back(station, std::string{icaoStr, icaoLength});
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getDeferredSynops(std::vector<std::tuple<CassUuid, std::string>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectDeferredSynops.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectDeferredSynops.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				const char *icaoStr;
@@ -930,34 +786,13 @@ namespace meteodata {
 				cass_value_get_string(cass_row_get_column(row,1), &icaoStr, &icaoLength);
 				stations.emplace_back(station, std::string{icaoStr, icaoLength});
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getAllFieldClimateApiStations(std::vector<std::tuple<CassUuid, std::string, int, std::map<std::string, std::string>>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectFieldClimateApiStations.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectFieldClimateApiStations.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				cass_bool_t active;
@@ -990,34 +825,13 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{fieldClimateId, sizeFieldClimateId}, tz, sensors);
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getAllObjeniousApiStations(std::vector<std::tuple<CassUuid, std::string, std::map<std::string, std::string>>>& stations)
 	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_selectObjeniousApiStations.get()),
-			cass_statement_free
-		};
-		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-			cass_session_execute(_session.get(), statement.get()),
-			cass_future_free
-		};
-		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-			cass_future_get_result(query.get()),
-			cass_result_free
-		};
-		bool ret = false;
-		if (result) {
-			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-				cass_iterator_from_result(result.get()),
-				cass_iterator_free
-			};
-			while (cass_iterator_next(iterator.get())) {
-				const CassRow* row = cass_iterator_get_row(iterator.get());
+		return performSelect(_selectObjeniousApiStations.get(),
+			[&stations](const CassRow* row) {
 				CassUuid station;
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
 				cass_bool_t active;
@@ -1048,10 +862,7 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{objeniousId, sizeObjeniousId}, variables);
 			}
-			ret = true;
-		}
-
-		return ret;
+		);
 	}
 
 	bool DbConnectionObservations::getRainfall(const CassUuid& station, time_t begin, time_t end, float& rainfall)

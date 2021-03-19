@@ -26,6 +26,7 @@
 #include <exception>
 #include <chrono>
 #include <unordered_map>
+#include <functional>
 
 #include <cassandra.h>
 #include <syslog.h>
@@ -230,4 +231,44 @@ bool DbConnectionCommon::getWindValues(const CassUuid& uuid, const date::sys_day
 
 	return ret;
 }
+
+	bool DbConnectionCommon::performSelect(const CassPrepared* stmt, const std::function<void(const CassRow*)>& rowHandler)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(stmt),
+			cass_statement_free
+		};
+
+		cass_bool_t hasMorePages = cass_true;
+		bool ret = true;
+		while (ret && hasMorePages) {
+			std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+				cass_session_execute(_session.get(), statement.get()),
+				cass_future_free
+			};
+			std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+				cass_future_get_result(query.get()),
+				cass_result_free
+			};
+			ret = false;
+			if (result) {
+				std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+					cass_iterator_from_result(result.get()),
+					cass_iterator_free
+				};
+				while (cass_iterator_next(iterator.get())) {
+					const CassRow* row = cass_iterator_get_row(iterator.get());
+					rowHandler(row);
+				}
+				ret = true;
+
+				hasMorePages = cass_result_has_more_pages(result.get());
+				if (hasMorePages) {
+					cass_statement_set_paging_state(statement.get(), result.get());
+				}
+			}
+		}
+
+		return ret;
+	}
 }

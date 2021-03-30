@@ -11,6 +11,6 @@ clean-local:
 	rm -rf doc
 endif
 
-pkgconfig_DATA = cassobs.pc.in
+pkgconfig_DATA = cassobs.pc
 
-DISTCLEANFILES = $ (pkgconfig_DATA)
+DISTCLEANFILES = $(pkgconfig_DATA)

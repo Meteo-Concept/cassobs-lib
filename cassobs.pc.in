@@ -7,6 +7,6 @@ Name: @PACKAGE_NAME@
 Description: Fetch station info and observations from the Meteodata databases
 URL: https://gogs.meteo-concept.fr/Meteodata/cassobs-libs/
 Version: @PACKAGE_VERSION@
-Requires: libcassandra2
-Libs: -lcassobs -L${libdir}
+Requires:
+Libs: -lcassobs2 -L${libdir}
 Cflags: -I${includedir}

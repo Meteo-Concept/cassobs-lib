@@ -14,6 +14,9 @@ AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_14
 # For libtooling
 AM_PROG_AR
+# For pkg-configing
+PKG_PROG_PKG_CONFIG
+PKG_INSTALLDIR
 # For the documentation
 AC_CHECK_PROGS([DOT], [dot])
 if test -z "$DOT";
@@ -45,6 +48,6 @@ AC_CHECK_LIB([tz3],[locate_zone])
 PKG_CHECK_MODULES(MYSQL, [mariadb mysqlclient])
 
 # Output the configuration
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile cassobs.pc])
 LT_INIT
 AC_OUTPUT

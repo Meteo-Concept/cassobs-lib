@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libcassobs.la
+lib_LTLIBRARIES = libcassobs2.la
 include_HEADERS = \
 		dbconnection_observations.h\
 		dbconnection_common.h\
@@ -11,7 +11,7 @@ include_HEADERS = \
 		monthly_records.h\
 		dbconnection_records.h
 
-libcassobs_la_SOURCES = \
+libcassobs2_la_SOURCES = \
 		    dbconnection_common.cpp\
 		    dbconnection_common.h\
 		    dbconnection_observations.cpp\
@@ -31,10 +31,10 @@ libcassobs_la_SOURCES = \
 		    observation.cpp \
 		    message.h
 
-libcassobs_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CFLAGS) $(DATE_CFLAGS) $(MYSQL_CFLAGS)
-libcassobs_la_CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
-libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(MYSQL_LIBS)
-libcassobs_la_LDFLAGS = -version-info 2:0:0
+libcassobs2_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CFLAGS) $(DATE_CFLAGS) $(MYSQL_CFLAGS)
+libcassobs2_la_CXXFLAGS =
+libcassobs2_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(MYSQL_LIBS)
+libcassobs2_la_LDFLAGS = -version-info 2:0:0
 
 check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations
 TESTS=$(check_PROGRAMS)

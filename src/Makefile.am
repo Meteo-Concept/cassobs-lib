@@ -31,7 +31,7 @@ libcassobs_la_SOURCES = \
 		    observation.cpp \
 		    message.h
 
-libcassobs_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CPPFLAGS) $(DATE_CPPFLAGS) $(MYSQL_CPPFLAGS)
+libcassobs_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CFLAGS) $(DATE_CFLAGS) $(MYSQL_CFLAGS)
 libcassobs_la_CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
 libcassobs_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(MYSQL_LIBS)
 libcassobs_la_LDFLAGS = -version-info 2:0:0

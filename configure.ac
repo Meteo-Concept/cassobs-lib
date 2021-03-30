@@ -41,7 +41,8 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 AX_PTHREAD
 AC_CHECK_LIB([cassandra],[cass_session_new])
-AC_CHECK_LIB([mariadbclient],[mysql_real_connect])
+AC_CHECK_LIB([tz3],[locate_zone])
+PKG_CHECK_MODULES(MYSQL, [mariadb mysqlclient])
 
 # Output the configuration
 AC_CONFIG_FILES([Makefile src/Makefile])

@@ -54,7 +54,7 @@ namespace chrono = std::chrono;
 DbConnectionRecords::DbConnectionRecords(const std::string& address, const std::string& user, const std::string& password) :
 	DbConnectionCommon(address, user, password)
 {
-	prepareStatements();
+	DbConnectionRecords::prepareStatements();
 }
 
 void DbConnectionRecords::prepareStatements()

@@ -42,7 +42,7 @@ namespace meteodata {
 	DbConnectionObservations::DbConnectionObservations(const std::string& address, const std::string& user, const std::string& password) :
 		DbConnectionCommon(address, user, password)
 	{
-		prepareStatements();
+		DbConnectionObservations::prepareStatements();
 	}
 
 	void DbConnectionObservations::prepareStatements()
@@ -93,8 +93,8 @@ namespace meteodata {
 			" AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1"
 		);
 
-		prepareOneStatement(_insertV2DataPoint,
-			"INSERT INTO meteodata_v2.meteo ("
+		prepareOneStatement(_insertV2RawDataPoint,
+			"INSERT INTO meteodata_v2.raw_meteo ("
 			"station,"
 			"day, time,"
 			"barometer,"
@@ -135,6 +135,59 @@ namespace meteodata {
 			"?,"		// "et,"
 			"?, ?, ?,"	// "soilmoistures1, soilmoistures2, soilmoistures3,"
 				"?,"	// 	"soilmoistures4,"
+			"?, ?, ?, ?,"	// "soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"?,"		// "solarrad,"
+			"?,"		// "thswindex,"
+			"?,"		// "uv,"
+			"?,"		// "windchill,"
+			"?, ?, ?,"	// "winddir, windgust, windspeed,"
+			"?,"		// "insolation_time"
+			"?,?,"		// "min_outside_temperature, max_outside_temperature"
+			"?)"		// "leafwetnesses_timeratio1"
+		);
+
+		prepareOneStatement(_insertV2FilteredDataPoint,
+			"INSERT INTO meteodata_v2.meteo ("
+			"station,"
+			"day, time,"
+			"barometer,"
+			"dewpoint,"
+			"extrahum1, extrahum2,"
+			"extratemp1,extratemp2, extratemp3,"
+			"heatindex,"
+			"insidehum,insidetemp,"
+			"leaftemp1, leaftemp2,"
+			"leafwetnesses1, leafwetnesses2,"
+			"outsidehum,outsidetemp,"
+			"rainrate, rainfall,"
+			"et,"
+			"soilmoistures1, soilmoistures2, soilmoistures3,"
+			"soilmoistures4,"
+			"soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"solarrad,"
+			"thswindex,"
+			"uv,"
+			"windchill,"
+			"winddir, windgust, windspeed,"
+			"insolation_time,"
+			"min_outside_temperature, max_outside_temperature,"
+			"leafwetnesses_timeratio1) "
+			" VALUES ("
+			"?,"		// "station,"
+			"?, ?,"		// "day, time,"
+			"?,"		// "barometer,"
+			"?,"		// "dewpoint,"
+			"?, ?,"		// "extrahum1, extrahum2,"
+			"?,?, ?,"	// "extratemp1,extratemp2, extratemp3,"
+			"?,"		// "heatindex,"
+			"?,?,"		// "insidehum,insidetemp,"
+			"?, ?,"		// "leaftemp1, leaftemp2,"
+			"?, ?,"		// "leafwetnesses1, leafwetnesses2,"
+			"?,?,"		// "outsidehum,outsidetemp,"
+			"?, ?,"		// "rainrate, rainfall,"
+			"?,"		// "et,"
+			"?, ?, ?,"	// "soilmoistures1, soilmoistures2, soilmoistures3,"
+			"?,"		// "soilmoistures4,"
 			"?, ?, ?, ?,"	// "soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
 			"?,"		// "solarrad,"
 			"?,"		// "thswindex,"
@@ -412,7 +465,7 @@ namespace meteodata {
 	bool DbConnectionObservations::insertV2DataPoint(const CassUuid station, const Message& msg)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(_insertV2DataPoint.get()),
+			cass_prepared_bind(_insertV2FilteredDataPoint.get()),
 			cass_statement_free
 		};
 		msg.populateV2DataPoint(station, statement.get());
@@ -434,6 +487,146 @@ namespace meteodata {
 		}
 
 		return ret;
+	}
+
+	void DbConnectionObservations::populateV2InsertionQuery(CassStatement* statement, const Observation& obs)
+	{
+		/*************************************************************/
+		cass_statement_bind_uuid(statement, 0, obs.station);
+		/*************************************************************/
+		cass_statement_bind_uint32(statement, 1, cass_date_from_epoch(obs.time.time_since_epoch().count()));
+		cass_statement_bind_int64(statement, 2, 1000*obs.time.time_since_epoch().count()); // in ms
+		/*************************************************************/
+		if (obs.barometer.first)
+			cass_statement_bind_float(statement, 3, obs.barometer.second);
+		/*************************************************************/
+		if (obs.dewpoint.first)
+			cass_statement_bind_float(statement, 4, obs.dewpoint.second);
+		/*************************************************************/
+		for (int i=0 ; i<2 ; i++) {
+			if (obs.extrahum[i].first)
+				cass_statement_bind_int32(statement, 5+i, obs.extrahum[i].second);
+		}
+		/*************************************************************/
+		for (int i=0 ; i<3 ; i++) {
+			if (obs.extratemp[i].first)
+				cass_statement_bind_float(statement, 7+i, obs.extratemp[i].second);
+		}
+		/*************************************************************/
+		if (obs.heatindex.first)
+			cass_statement_bind_float(statement, 10, obs.heatindex.second);
+		/*************************************************************/
+		// Do not record inside hum
+		/*************************************************************/
+		// Do not record inside temp
+		/*************************************************************/
+		for (int i=0 ; i<2 ; i++) {
+			if (obs.leaftemp[i].first)
+				cass_statement_bind_float(statement, 13+i, obs.leaftemp[i].second);
+			if (obs.leafwetnesses[i].first)
+				cass_statement_bind_int32(statement, 15+i, obs.leafwetnesses[i].second);
+		}
+		/*************************************************************/
+		if (obs.outsidehum.first)
+			cass_statement_bind_int32(statement, 17, obs.outsidehum.second);
+		/*************************************************************/
+		if (obs.outsidetemp.first)
+			cass_statement_bind_float(statement, 18, obs.outsidetemp.second);
+		/*************************************************************/
+		if (obs.rainrate.first)
+			cass_statement_bind_float(statement, 19, obs.rainrate.second);
+		/*************************************************************/
+		if (obs.rainfall.first)
+			cass_statement_bind_float(statement, 20, obs.rainfall.second);
+		/*************************************************************/
+		if (obs.et.first)
+			cass_statement_bind_float(statement, 20, obs.et.second);
+		/*************************************************************/
+		for (int i=0 ; i<4 ; i++) {
+			if (obs.soilmoistures[i].first)
+				cass_statement_bind_int32(statement, 22+i, obs.soilmoistures[i].second);
+		}
+		/*************************************************************/
+		for (int i=0 ; i<4 ; i++) {
+			if (obs.soiltemp[i].first)
+				cass_statement_bind_float(statement, 26+i, obs.soiltemp[i].second);
+		}
+		/*************************************************************/
+		if (obs.solarrad.first)
+			cass_statement_bind_int32(statement, 30, obs.solarrad.second);
+		/*************************************************************/
+		if (obs.thswindex.first)
+			cass_statement_bind_float(statement, 31, obs.thswindex.second);
+		/*************************************************************/
+		if (obs.uv.first)
+			cass_statement_bind_int32(statement, 32, obs.uv.second);
+		/*************************************************************/
+		if (obs.windchill.first)
+			cass_statement_bind_float(statement, 33, obs.windchill.second);
+		/*************************************************************/
+		if (obs.winddir.first)
+			cass_statement_bind_int32(statement, 34, obs.winddir.second);
+		/*************************************************************/
+		if (obs.windgust.first)
+			cass_statement_bind_float(statement, 35, obs.windgust.second);
+		/*************************************************************/
+		if (obs.windspeed.first)
+			cass_statement_bind_float(statement, 36, obs.windspeed.second);
+		/*************************************************************/
+		if (obs.insolation_time.first)
+			cass_statement_bind_int32(statement, 37, obs.insolation_time.second);
+		/*************************************************************/
+		if (obs.min_outside_temperature.first)
+			cass_statement_bind_float(statement, 38, obs.min_outside_temperature.second);
+		/*************************************************************/
+		if (obs.max_outside_temperature.first)
+			cass_statement_bind_float(statement, 39, obs.max_outside_temperature.second);
+		/*************************************************************/
+		if (obs.leafwetness_timeratio1.first)
+			cass_statement_bind_float(statement, 40, obs.leafwetness_timeratio1.second);
+		/*************************************************************/
+	}
+
+	bool DbConnectionObservations::insertV2DataPoint(const Observation& obs)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertV2RawDataPoint.get()),
+				cass_statement_free
+		};
+
+		populateV2InsertionQuery(statement.get(), obs);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+				cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+				cass_result_free
+		};
+
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			return false;
+		}
+
+
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement2{
+			cass_prepared_bind(_insertV2FilteredDataPoint.get()),
+				cass_statement_free
+		};
+		populateV2InsertionQuery(statement2.get(), obs);
+		query.reset(cass_session_execute(_session.get(), statement2.get()));
+		result.reset(cass_future_get_result(query.get()));
+
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			return false;
+		}
+		return true;
 	}
 
 	bool DbConnectionObservations::insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24)

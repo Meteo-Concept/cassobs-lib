@@ -36,35 +36,38 @@ namespace chrono = std::chrono;
 
 class Observation
 {
+public:
 	CassUuid station;
 	date::sys_days day;
 	date::sys_seconds time;
-	std::pair<bool,float> barometer        = {false,0};
-	std::pair<bool,float> dewpoint         = {false,0};
-	std::pair<bool,int  > extrahum[2]      = {{false,0}};
-	std::pair<bool,float> extratemp[3]     = {{false,0}};
-	std::pair<bool,float> heatindex        = {false,0};
-	std::pair<bool,int  > insidehum        = {false,0};
-	std::pair<bool,float> insidetemp       = {false,0};
-	std::pair<bool,float> leaftemp[2]      = {{false,0}};
-	std::pair<bool,int  > leafwetnesses[2] = {{false,0}};
-	std::pair<bool,int  > outsidehum       = {false,0};
-	std::pair<bool,float> outsidetemp      = {false,0};
-	std::pair<bool,float> rainrate         = {false,0};
-	std::pair<bool,float> rainfall         = {false,0};
-	std::pair<bool,float> et               = {false,0};
-	std::pair<bool,float> soilmoistures[4] = {{false,0}};
-	std::pair<bool,float> soiltemp[4]      = {{false,0}};
-	std::pair<bool,int  > solarrad         = {false,0};
-	std::pair<bool,int  > thswindex        = {false,0};
-	std::pair<bool,int  > uv               = {false,0};
-	std::pair<bool,float> windchill        = {false,0};
-	std::pair<bool,int  > winddir          = {false,0};
-	std::pair<bool,float> windgust         = {false,0};
-	std::pair<bool,float> windspeed        = {false,0};
-	std::pair<bool,int  > insolation_time  = {false,0};
+	std::pair<bool,float> barometer                = {false,0};
+	std::pair<bool,float> dewpoint                 = {false,0};
+	std::pair<bool,int  > extrahum[2]              = {{false,0}};
+	std::pair<bool,float> extratemp[3]             = {{false,0}};
+	std::pair<bool,float> heatindex                = {false,0};
+	std::pair<bool,int  > insidehum                = {false,0};
+	std::pair<bool,float> insidetemp               = {false,0};
+	std::pair<bool,float> leaftemp[2]              = {{false,0}};
+	std::pair<bool,int  > leafwetnesses[2]         = {{false,0}};
+	std::pair<bool,int  > outsidehum               = {false,0};
+	std::pair<bool,float> outsidetemp              = {false,0};
+	std::pair<bool,float> rainrate                 = {false,0};
+	std::pair<bool,float> rainfall                 = {false,0};
+	std::pair<bool,float> et                       = {false,0};
+	std::pair<bool,float> soilmoistures[4]         = {{false,0}};
+	std::pair<bool,float> soiltemp[4]              = {{false,0}};
+	std::pair<bool,int  > solarrad                 = {false,0};
+	std::pair<bool,int  > thswindex                = {false,0};
+	std::pair<bool,int  > uv                       = {false,0};
+	std::pair<bool,float> windchill                = {false,0};
+	std::pair<bool,int  > winddir                  = {false,0};
+    std::pair<bool,float> windgust                 = {false,0};
+	std::pair<bool,float> windspeed                = {false,0};
+	std::pair<bool,int  > insolation_time          = {false,0};
+    std::pair<bool,float> min_outside_temperature  = {false,0};
+    std::pair<bool,float> max_outside_temperature  = {false,0};
+    std::pair<bool,int  > leafwetness_timeratio1   = {false,0};
 
-public:
 	template<typename ColumnType>
 	ColumnType get(const std::string& column) const
 	{
@@ -77,6 +80,8 @@ public:
 	void set(const std::string& column, int value);
 
 	bool isPresent(const std::string& column) const;
+
+	void filterOutImpossibleValues();
 };
 
 template<>

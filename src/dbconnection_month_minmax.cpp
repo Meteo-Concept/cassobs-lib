@@ -47,7 +47,7 @@ namespace chrono = std::chrono;
 DbConnectionMonthMinmax::DbConnectionMonthMinmax(const std::string& address, const std::string& user, const std::string& password) :
 	DbConnectionCommon(address, user, password)
 {
-	prepareStatements();
+	DbConnectionMonthMinmax::prepareStatements();
 }
 
 void DbConnectionMonthMinmax::prepareStatements()

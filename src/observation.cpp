@@ -27,6 +27,7 @@
 #include <date.h>
 
 #include "observation.h"
+#include "filter.h"
 
 namespace meteodata {
 
@@ -104,9 +105,15 @@ void Observation::set(const std::string& column, float value)
 		windgust.first = true;
 		windgust.second = value;
 	} else if (column == "windspeed" || column == "wind_speed") {
-		windspeed.first = true;
-		windspeed.second = value;
-	} else {
+        windspeed.first = true;
+        windspeed.second = value;
+    } else if (column == "min_outside_temperature") {
+        min_outside_temperature.first = true;
+	    min_outside_temperature.second = value;
+    } else if (column == "max_outside_temperature") {
+        max_outside_temperature.first = true;
+        max_outside_temperature.second = value;
+    } else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not a float");
 	}
 }
@@ -155,6 +162,9 @@ void Observation::set(const std::string& column, int value)
 	} else if (column == "insolation_time") {
 		insolation_time.first = true;
 		insolation_time.second = value;
+    } else if (column == "leafwetness_timeratio1") {
+        leafwetness_timeratio1.first = true;
+        leafwetness_timeratio1.second = value;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not an integer");
 	}
@@ -214,7 +224,11 @@ float Observation::get<float>(const std::string& column) const
 	} else if (column == "windgust" || column == "windgust_speed") {
 		return windgust.second;
 	} else if (column == "windspeed" || column == "wind_speed") {
-		return windspeed.second;
+        return windspeed.second;
+    } else if (column == "min_outside_temperature") {
+	    return min_outside_temperature.second;
+    } else if (column == "max_outside_temperature") {
+        return max_outside_temperature.second;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not a float");
 	}
@@ -331,6 +345,12 @@ bool Observation::isPresent(const std::string& column) const
 		return winddir.first;
 	} else if (column == "insolation_time") {
 		return insolation_time.first;
+    } else if (column == "min_outside_temperature") {
+        return min_outside_temperature.first;
+	} else if (column == "max_outside_temperature") {
+        return max_outside_temperature.first;
+    } else if (column == "leafwetness_timeratio1") {
+        return leafwetness_timeratio1.first;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist");
 	}
@@ -356,6 +376,120 @@ date::sys_seconds Observation::get<date::sys_seconds>(const std::string& column)
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not a timestamp");
 	}
+}
+
+void Observation::filterOutImpossibleValues()
+{
+    /*************************************************************/
+    barometer.first = barometer.first
+            && barometer.second >= Filter::MIN_BAROMETER
+            && barometer.second <= Filter::MAX_BAROMETER;
+    /*************************************************************/
+    dewpoint.first = dewpoint.first
+            && dewpoint.second >= Filter::MIN_AIR_TEMPERATURE
+            && dewpoint.second <= Filter::MAX_AIR_TEMPERATURE;
+    /*************************************************************/
+    for (int i=0 ; i<2 ; i++) {
+        extrahum[i].first = extrahum[i].first
+                && extrahum[i].second >= Filter::MIN_HUMIDITY
+                && extrahum[i].second <= Filter::MAX_HUMIDITY;
+    }
+    /*************************************************************/
+    for (int i=0 ; i<3 ; i++) {
+        extratemp[i].first = extratemp[i].first
+                && extratemp[i].second >= Filter::MIN_AIR_TEMPERATURE
+                && extratemp[i].second <= Filter::MAX_AIR_TEMPERATURE;
+    }
+    /*************************************************************/
+    heatindex.first = heatindex.first
+            && heatindex.second >= Filter::MIN_AIR_TEMPERATURE
+            && heatindex.second <= Filter::MAX_AIR_TEMPERATURE;
+    /*************************************************************/
+    // Do not record inside hum
+    /*************************************************************/
+    // Do not record inside temp
+    /*************************************************************/
+    for (int i=0 ; i<2 ; i++) {
+        leaftemp[i].first = leaftemp[i].first
+                && leaftemp[i].second >= Filter::MIN_AIR_TEMPERATURE
+                && leaftemp[i].second <= Filter::MAX_AIR_TEMPERATURE;
+        leafwetnesses[i].first = leafwetnesses[i].first
+                && leafwetnesses[i].second >= Filter::MIN_AIR_TEMPERATURE
+                && leafwetnesses[i].second <= Filter::MAX_AIR_TEMPERATURE;
+    }
+    /*************************************************************/
+    outsidehum.first = outsidehum.first
+            && outsidehum.second >= Filter::MIN_HUMIDITY
+            && outsidehum.second <= Filter::MAX_HUMIDITY;
+    /*************************************************************/
+    outsidetemp.first = outsidetemp.first
+            && outsidetemp.second >= Filter::MIN_AIR_TEMPERATURE
+            && outsidetemp.second <= Filter::MAX_AIR_TEMPERATURE;
+    /*************************************************************/
+    rainrate.first = rainrate.first
+            && rainrate.second >= Filter::MIN_RAINRATE
+            && rainrate.second <= Filter::MAX_RAINRATE;
+    /*************************************************************/
+    rainfall.first = rainfall.first
+            && rainfall.second >= Filter::MIN_RAINFALL
+            && rainfall.second <= Filter::MAX_RAINFALL;
+    /*************************************************************/
+    et.first = et.first
+            && et.second >= Filter::MIN_RAINFALL
+            && et.second <= Filter::MAX_RAINFALL;
+    /*************************************************************/
+    for (int i=0 ; i<4 ; i++) {
+        soilmoistures[i].first = soilmoistures[i].first
+                && soilmoistures[i].second >= Filter::MIN_SOILMOISTURE
+                && soilmoistures[i].second <= Filter::MAX_SOILMOISTURE;
+    }
+    /*************************************************************/
+    for (int i=0 ; i<4 ; i++) {
+        soiltemp[i].first = soiltemp[i].first
+               && soiltemp[i].second >= Filter::MIN_SOIL_TEMPERATURE
+               && soiltemp[i].second <= Filter::MAX_SOIL_TEMPERATURE;
+    }
+    /*************************************************************/
+    solarrad.first = solarrad.first
+            && solarrad.second >= Filter::MIN_SOLARRAD
+            && solarrad.second <= Filter::MAX_SOLARRAD;
+    /*************************************************************/
+    thswindex.first = thswindex.first
+            && thswindex.second >= Filter::MIN_AIR_TEMPERATURE
+            && thswindex.second <= Filter::MAX_AIR_TEMPERATURE;
+    /*************************************************************/
+    uv.first = uv.first
+            && uv.second >= Filter::MIN_UV
+            && uv.second <= Filter::MAX_UV;
+    /*************************************************************/
+    windchill.first = windchill.first
+            && windchill.second <= Filter::MIN_AIR_TEMPERATURE
+            && windchill.second >= Filter::MAX_AIR_TEMPERATURE;
+    /*************************************************************/
+    winddir.first = winddir.first
+            && winddir.second <= Filter::MIN_WINDDIR
+            && winddir.second >= Filter::MAX_WINDDIR;
+    /*************************************************************/
+    windgust.first = windgust.first
+            && windgust.second <= Filter::MIN_WINDGUST_SPEED
+            && windgust.second >= Filter::MAX_WINDGUST_SPEED;
+    /*************************************************************/
+    windspeed.first = windspeed.first
+            && windspeed.second <= Filter::MIN_WIND_SPEED
+            && windspeed.second >= Filter::MAX_WIND_SPEED;
+    /*************************************************************/
+    // no treatment for insolation time
+    /*************************************************************/
+    min_outside_temperature.first = min_outside_temperature.first
+            && min_outside_temperature.second <= Filter::MIN_AIR_TEMPERATURE
+            && min_outside_temperature.second >= Filter::MAX_AIR_TEMPERATURE;
+    /*************************************************************/
+    max_outside_temperature.first = max_outside_temperature.first
+           && max_outside_temperature.second <= Filter::MIN_AIR_TEMPERATURE
+           && max_outside_temperature.second >= Filter::MAX_AIR_TEMPERATURE;
+    /*************************************************************/
+    // no treatment for leafwetness_timeratio
+    /*************************************************************/
 }
 
 }

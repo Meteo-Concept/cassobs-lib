@@ -62,7 +62,7 @@ DbConnectionNormals::DbConnectionNormals(const std::string& host, const std::str
 	}
 	mysql_set_character_set(_db.get(), "utf8mb4");
 
-	prepareStatements();
+	DbConnectionNormals::prepareStatements();
 }
 
 void DbConnectionNormals::panic(const std::string& msg)

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([CassObs], [1.1.5], [contact@meteo-concept.fr])
+AC_INIT([CassObs], [1.2.0], [contact@meteo-concept.fr])
 AC_CANONICAL_TARGET
 AC_CONFIG_SRCDIR([src/dbconnection_common.h])
 AC_CONFIG_HEADERS([src/config.h])
@@ -44,7 +44,13 @@ AC_TYPE_SIZE_T
 
 # Checks for library functions.
 AX_PTHREAD
-PKG_CHECK_MODULES(MYSQL, [mariadb mysqlclient])
+PKG_CHECK_MODULES([MYSQL], [mariadb],
+   [AC_DEFINE([HAVE_MYSQL], [1], [Use MariaDB MySQL emulation])],
+   [PKG_CHECK_MODULES([MYSQL], [mysqlclient],
+       [AC_DEFINE([HAVE_MYSQL], [1], [Use MySQL client])
+    ])
+])
+
 PKG_CHECK_MODULES(DATE, [date])
 PKG_CHECK_MODULES(CASSANDRA, [cassandra])
 

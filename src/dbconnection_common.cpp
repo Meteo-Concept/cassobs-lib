@@ -61,7 +61,7 @@ DbConnectionCommon::DbConnectionCommon(const std::string& address, const std::st
 		desc.append(cass_error_desc(rc));
 		throw std::runtime_error(desc);
 	} else {
-		prepareStatements();
+		DbConnectionCommon::prepareStatements();
 	}
 }
 

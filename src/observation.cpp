@@ -435,8 +435,8 @@ void Observation::filterOutImpossibleValues()
             && rainfall.second <= Filter::MAX_RAINFALL;
     /*************************************************************/
     et.first = et.first
-            && et.second >= Filter::MIN_RAINFALL
-            && et.second <= Filter::MAX_RAINFALL;
+            && et.second >= Filter::MIN_ET
+            && et.second <= Filter::MAX_ET;
     /*************************************************************/
     for (int i=0 ; i<4 ; i++) {
         soilmoistures[i].first = soilmoistures[i].first
@@ -463,30 +463,30 @@ void Observation::filterOutImpossibleValues()
             && uv.second <= Filter::MAX_UV;
     /*************************************************************/
     windchill.first = windchill.first
-            && windchill.second <= Filter::MIN_AIR_TEMPERATURE
-            && windchill.second >= Filter::MAX_AIR_TEMPERATURE;
+            && windchill.second >= Filter::MIN_AIR_TEMPERATURE
+            && windchill.second <= Filter::MAX_AIR_TEMPERATURE;
     /*************************************************************/
     winddir.first = winddir.first
-            && winddir.second <= Filter::MIN_WINDDIR
-            && winddir.second >= Filter::MAX_WINDDIR;
+            && winddir.second >= Filter::MIN_WINDDIR
+            && winddir.second <= Filter::MAX_WINDDIR;
     /*************************************************************/
     windgust.first = windgust.first
-            && windgust.second <= Filter::MIN_WINDGUST_SPEED
-            && windgust.second >= Filter::MAX_WINDGUST_SPEED;
+            && windgust.second >= Filter::MIN_WINDGUST_SPEED
+            && windgust.second <= Filter::MAX_WINDGUST_SPEED;
     /*************************************************************/
     windspeed.first = windspeed.first
-            && windspeed.second <= Filter::MIN_WIND_SPEED
-            && windspeed.second >= Filter::MAX_WIND_SPEED;
+            && windspeed.second >= Filter::MIN_WIND_SPEED
+            && windspeed.second <= Filter::MAX_WIND_SPEED;
     /*************************************************************/
     // no treatment for insolation time
     /*************************************************************/
     min_outside_temperature.first = min_outside_temperature.first
-            && min_outside_temperature.second <= Filter::MIN_AIR_TEMPERATURE
-            && min_outside_temperature.second >= Filter::MAX_AIR_TEMPERATURE;
+            && min_outside_temperature.second >= Filter::MIN_AIR_TEMPERATURE
+            && min_outside_temperature.second <= Filter::MAX_AIR_TEMPERATURE;
     /*************************************************************/
     max_outside_temperature.first = max_outside_temperature.first
-           && max_outside_temperature.second <= Filter::MIN_AIR_TEMPERATURE
-           && max_outside_temperature.second >= Filter::MAX_AIR_TEMPERATURE;
+           && max_outside_temperature.second >= Filter::MIN_AIR_TEMPERATURE
+           && max_outside_temperature.second <= Filter::MAX_AIR_TEMPERATURE;
     /*************************************************************/
     // no treatment for leafwetness_timeratio
     /*************************************************************/

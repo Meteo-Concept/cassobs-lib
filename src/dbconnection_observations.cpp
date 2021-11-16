@@ -540,7 +540,7 @@ namespace meteodata {
 			cass_statement_bind_float(statement, 20, obs.rainfall.second);
 		/*************************************************************/
 		if (obs.et.first)
-			cass_statement_bind_float(statement, 20, obs.et.second);
+			cass_statement_bind_float(statement, 21, obs.et.second);
 		/*************************************************************/
 		for (int i=0 ; i<4 ; i++) {
 			if (obs.soilmoistures[i].first)
@@ -591,17 +591,17 @@ namespace meteodata {
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_insertV2RawDataPoint.get()),
-				cass_statement_free
+			cass_statement_free
 		};
 
 		populateV2InsertionQuery(statement.get(), obs);
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 			cass_session_execute(_session.get(), statement.get()),
-				cass_future_free
+			cass_future_free
 		};
 		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
 			cass_future_get_result(query.get()),
-				cass_result_free
+			cass_result_free
 		};
 
 		if (!result) {
@@ -614,9 +614,11 @@ namespace meteodata {
 
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement2{
 			cass_prepared_bind(_insertV2FilteredDataPoint.get()),
-				cass_statement_free
+			cass_statement_free
 		};
-		populateV2InsertionQuery(statement2.get(), obs);
+		Observation copy{obs};
+		copy.filterOutImpossibleValues();
+		populateV2InsertionQuery(statement2.get(), copy);
 		query.reset(cass_session_execute(_session.get(), statement2.get()));
 		result.reset(cass_future_get_result(query.get()));
 

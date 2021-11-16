@@ -38,7 +38,7 @@ struct Filter {
     static constexpr int MIN_SOILMOISTURE = 0;
     static constexpr int MAX_SOILMOISTURE = 200;
     static constexpr float MIN_UV = 0;
-    static constexpr float MAX_UV = 14;
+    static constexpr float MAX_UV = 140;
 };
 
 

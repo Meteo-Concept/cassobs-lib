@@ -101,8 +101,10 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 		CassUuid uuid;
 		while (cass_iterator_next(iterator)) {
 			const CassRow* row = cass_iterator_get_row(iterator);
-			cass_value_get_uuid(cass_row_get_column(row,0), &uuid);
-			stations.push_back(uuid);
+			if (row) {
+				cass_value_get_uuid(cass_row_get_column(row, 0), &uuid);
+				stations.push_back(uuid);
+			}
 		}
 		ret = true;
 		cass_iterator_free(iterator);
@@ -124,8 +126,10 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 		CassUuid uuid;
 		while (cass_iterator_next(iterator)) {
 			const CassRow* row = cass_iterator_get_row(iterator);
-			cass_value_get_uuid(cass_row_get_column(row,0), &uuid);
-			stations.push_back(uuid);
+			if (row) {
+				cass_value_get_uuid(cass_row_get_column(row, 0), &uuid);
+				stations.push_back(uuid);
+			}
 		}
 		ret = true;
 		cass_iterator_free(iterator);
@@ -156,13 +160,25 @@ bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& na
 	if (result) {
 		const CassRow* row = cass_result_first_row(result.get());
 		if (row) {
-			const char *stationName;
+			const CassValue* v = cass_row_get_column(row, 0);
+			if (cass_value_is_null(v))
+				return false;
+			const char* stationName;
 			size_t size;
-			cass_value_get_string(cass_row_get_column(row,0), &stationName, &size);
-			cass_value_get_int32(cass_row_get_column(row,1), &pollPeriod);
+			cass_value_get_string(v, &stationName, &size);
+
+			v = cass_row_get_column(row, 1);
+			if (cass_value_is_null(v))
+				return false;
+			cass_value_get_int32(v, &pollPeriod);
+
+			v = cass_row_get_column(row, 2);
+			if (cass_value_is_null(v))
+				return false;
 			cass_int64_t timeMillisec;
-			cass_value_get_int64(cass_row_get_column(row,2), &timeMillisec);
+			cass_value_get_int64(v, &timeMillisec);
 			lastArchiveDownloadTime = timeMillisec/1000;
+
 			name.clear();
 			name.insert(0, stationName, size);
 			ret = true;
@@ -216,12 +232,14 @@ bool DbConnectionCommon::getWindValues(const CassUuid& uuid, const date::sys_day
 	CassIterator* it = cass_iterator_from_result(result);
 	while(cass_iterator_next(it)) {
 		const CassRow* row = cass_iterator_get_row(it);
-		std::pair<bool,int> dir;
-		std::pair<bool,float> speed;
-		storeCassandraInt(row, 0, dir);
-		storeCassandraFloat(row, 1, speed);
-		if (dir.first && speed.first)
-			values.emplace_back(dir.second, speed.second);
+		if (row) {
+			std::pair<bool, int> dir;
+			std::pair<bool, float> speed;
+			storeCassandraInt(row, 0, dir);
+			storeCassandraFloat(row, 1, speed);
+			if (dir.first && speed.first)
+				values.emplace_back(dir.second, speed.second);
+		}
 	}
 	ret = true;
 	cass_iterator_free(it);
@@ -258,7 +276,8 @@ bool DbConnectionCommon::getWindValues(const CassUuid& uuid, const date::sys_day
 				};
 				while (cass_iterator_next(iterator.get())) {
 					const CassRow* row = cass_iterator_get_row(iterator.get());
-					rowHandler(row);
+					if (row)
+						rowHandler(row);
 				}
 				ret = true;
 

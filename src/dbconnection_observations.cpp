@@ -305,6 +305,10 @@ namespace meteodata {
 			"SELECT station, active, objenious_id, variables FROM meteodata.objenious"
 		);
 
+		prepareOneStatement(_selectCimelStations,
+			"SELECT station, active, cimelid, tz FROM meteodata.cimel"
+		);
+
 		prepareOneStatement(_selectStatICTxtStations,
 			"SELECT station, active, host, url, https, tz FROM meteodata.statictxt"
 		);
@@ -1215,6 +1219,43 @@ namespace meteodata {
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{objeniousId, sizeObjeniousId}, variables);
 			}
+		);
+	}
+
+
+	bool DbConnectionObservations::getAllCimelStations(std::vector<std::tuple<CassUuid, std::string, int>>& stations)
+	{
+		return performSelect(_selectCimelStations.get(),
+							 [&stations](const CassRow* row) {
+								 const CassValue* v = cass_row_get_column(row, 0);
+								 if (cass_value_is_null(v))
+									 return;
+								 CassUuid station;
+								 cass_value_get_uuid(v, &station);
+
+								 v = cass_row_get_column(row, 1);
+								 if (cass_value_is_null(v))
+									 return;
+								 cass_bool_t active;
+								 cass_value_get_bool(v, &active);
+
+								 v = cass_row_get_column(row, 2);
+								 if (cass_value_is_null(v))
+									 return;
+								 const char *cimelId;
+								 size_t sizeCimelId;
+								 cass_value_get_string(v, &cimelId, &sizeCimelId);
+
+								 int timezone;
+								 v = cass_row_get_column(row, 3);
+								 if (cass_value_is_null(v))
+									 timezone = 0;
+								 else
+									 cass_value_get_int32(cass_row_get_column(row,3), &timezone);
+
+								 if (active == cass_true)
+									 stations.emplace_back(station, std::string{cimelId, sizeCimelId}, timezone);
+							 }
 		);
 	}
 

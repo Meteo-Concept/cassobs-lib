@@ -392,6 +392,22 @@ namespace meteodata {
 			bool getAllObjeniousApiStations(std::vector<std::tuple<CassUuid, std::string, std::map<std::string, std::string>>>& stations);
 
 			/**
+			 * @brief Get information relative to stations branded by CIMEL
+			 *
+			 * Each station is associated to a tuple (UUID,cimelId,timezone)
+			 * where 'UUID' is the identifier of the station,
+			 * 'cimelId' is the identifier for the station in the
+			 * CIMEL software (a combination of the city and a numerical identifier),
+			 * and 'timezone' is the timezone identifier of the station, which should
+			 * always be 0, for UTC.
+			 *
+			 * @param[out] stations A vector of tuple (UUID, cimelId, timezone)
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getAllCimelStations(std::vector<std::tuple<CassUuid, std::string, int>>& stations);
+
+			/**
 			 * @brief Get the total rainfall between two datetimes for a station
 			 *
 			 * @param[in] station The station UUID
@@ -511,6 +527,11 @@ namespace meteodata {
 			 * getObjeniousApiStations() method
 			 */
 			CassandraStmtPtr _selectObjeniousApiStations;
+			/**
+			 * @brief The prepared statement for the
+			 * getCimelStations() method
+			 */
+			CassandraStmtPtr _selectCimelStations;
 			/**
 			 * @brief The prepared statement for the getRainfall() method
 			 */

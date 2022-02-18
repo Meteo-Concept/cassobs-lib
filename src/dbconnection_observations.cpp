@@ -590,7 +590,7 @@ namespace meteodata {
 			cass_statement_bind_float(statement, 39, obs.max_outside_temperature.second);
 		/*************************************************************/
 		if (obs.leafwetness_timeratio1.first)
-			cass_statement_bind_float(statement, 40, obs.leafwetness_timeratio1.second);
+			cass_statement_bind_int32(statement, 40, obs.leafwetness_timeratio1.second);
 		/*************************************************************/
 	}
 

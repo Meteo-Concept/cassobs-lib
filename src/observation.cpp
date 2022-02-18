@@ -265,6 +265,8 @@ int Observation::get<int>(const std::string& column) const
 		return winddir.second;
 	} else if (column == "insolation_time") {
 		return insolation_time.second;
+	} else if (column == "leafwetness_timeratio1") {
+		return leafwetness_timeratio1.second;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not an integer");
 	}

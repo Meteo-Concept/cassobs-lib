@@ -333,6 +333,14 @@ namespace meteodata {
 		prepareOneStatement(_selectTn,
 			"SELECT tn FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1"
 		);
+
+		prepareOneStatement(_selectCached,
+			"SELECT time, value_int, value_float FROM meteodata_v2.cache WHERE station=? AND cache_key=?"
+		);
+
+		prepareOneStatement(_insertIntoCache,
+			"INSERT INTO meteodata_v2.cache (station, cache_key, time, value_int, value_float) VALUES (?, ?, ?, ?, ?)"
+		);
 	}
 
 	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
@@ -1226,36 +1234,36 @@ namespace meteodata {
 	bool DbConnectionObservations::getAllCimelStations(std::vector<std::tuple<CassUuid, std::string, int>>& stations)
 	{
 		return performSelect(_selectCimelStations.get(),
-							 [&stations](const CassRow* row) {
-								 const CassValue* v = cass_row_get_column(row, 0);
-								 if (cass_value_is_null(v))
-									 return;
-								 CassUuid station;
-								 cass_value_get_uuid(v, &station);
+				[&stations](const CassRow* row) {
+					const CassValue* v = cass_row_get_column(row, 0);
+					if (cass_value_is_null(v))
+						return;
+					CassUuid station;
+					cass_value_get_uuid(v, &station);
 
-								 v = cass_row_get_column(row, 1);
-								 if (cass_value_is_null(v))
-									 return;
-								 cass_bool_t active;
-								 cass_value_get_bool(v, &active);
+					v = cass_row_get_column(row, 1);
+					if (cass_value_is_null(v))
+						return;
+					cass_bool_t active;
+					cass_value_get_bool(v, &active);
 
-								 v = cass_row_get_column(row, 2);
-								 if (cass_value_is_null(v))
-									 return;
-								 const char *cimelId;
-								 size_t sizeCimelId;
-								 cass_value_get_string(v, &cimelId, &sizeCimelId);
+					v = cass_row_get_column(row, 2);
+					if (cass_value_is_null(v))
+						return;
+					const char *cimelId;
+					size_t sizeCimelId;
+					cass_value_get_string(v, &cimelId, &sizeCimelId);
 
-								 int timezone;
-								 v = cass_row_get_column(row, 3);
-								 if (cass_value_is_null(v))
-									 timezone = 0;
-								 else
-									 cass_value_get_int32(cass_row_get_column(row,3), &timezone);
+					int timezone;
+					v = cass_row_get_column(row, 3);
+					if (cass_value_is_null(v))
+						timezone = 0;
+					else
+						cass_value_get_int32(cass_row_get_column(row,3), &timezone);
 
-								 if (active == cass_true)
-									 stations.emplace_back(station, std::string{cimelId, sizeCimelId}, timezone);
-							 }
+					if (active == cass_true)
+						stations.emplace_back(station, std::string{cimelId, sizeCimelId}, timezone);
+				}
 		);
 	}
 
@@ -1406,6 +1414,186 @@ namespace meteodata {
 					value.second = f;
 				}
 			}
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getCachedInt(const CassUuid& station, const std::string& key, time_t& lastUpdate, int& value)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectCached.get()),
+			cass_statement_free
+		};
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_string_n(statement.get(), 1, key.data(), key.length());
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = false;
+		if (result) {
+			const CassRow* row = cass_result_first_row(result.get());
+			if (row) {
+				ret = true;
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (!cass_value_is_null(v)) {
+					cass_int64_t cassTimestamp;
+					cass_value_get_int64(v, &cassTimestamp);
+					lastUpdate = cassTimestamp / 1000;
+				} else {
+					ret = false;
+				}
+
+				v = cass_row_get_column(row, 1);
+				if (ret && !cass_value_is_null(v)) {
+					int i;
+					cass_value_get_int32(v, &i);
+					value = i;
+				} else {
+					ret = false;
+				}
+				// column 2 is not parsed
+			}
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::getCachedFloat(const CassUuid& station, const std::string& key, time_t& lastUpdate, float& value)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_selectCached.get()),
+			cass_statement_free
+		};
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_string_n(statement.get(), 1, key.data(), key.length());
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = false;
+		if (result) {
+			const CassRow* row = cass_result_first_row(result.get());
+			if (row) {
+				ret = true;
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (!cass_value_is_null(v)) {
+					cass_int64_t cassTimestamp;
+					cass_value_get_int64(v, &cassTimestamp);
+					lastUpdate = cassTimestamp / 1000;
+				} else {
+					ret = false;
+				}
+
+				// column 1 is not parsed
+				v = cass_row_get_column(row, 2);
+				if (ret && !cass_value_is_null(v)) {
+					float f;
+					cass_value_get_float(v, &f);
+					value = f;
+				} else {
+					ret = false;
+				}
+			}
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::cacheInt(const CassUuid& station, const std::string& key, const time_t& update, int value)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertIntoCache.get()),
+			cass_statement_free
+		};
+
+
+		time_t previousTime;
+		int previousValue;
+		bool alreadyPresent = getCachedInt(station, key, previousTime, previousValue);
+		if (alreadyPresent && previousTime > update) {
+			// there's already a value and it's more recent, don't
+			// insert the new one
+			return false;
+		}
+
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_string_n(statement.get(), 1, key.data(), key.length());
+		cass_statement_bind_int64(statement.get(), 2, update * 1000);
+		cass_statement_bind_int32(statement.get(), 3, value);
+		// field 4 intentionally not filled in
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = true;
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			ret = false;
+		}
+
+		return ret;
+	}
+
+	bool DbConnectionObservations::cacheFloat(const CassUuid& station, const std::string& key, const time_t& update, float value)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertIntoCache.get()),
+			cass_statement_free
+		};
+
+
+		time_t previousTime;
+		float previousValue;
+		bool alreadyPresent = getCachedFloat(station, key, previousTime, previousValue);
+		if (alreadyPresent && previousTime > update) {
+			// there's already a value and it's more recent, don't
+			// insert the new one
+			return false;
+		}
+
+
+		cass_statement_bind_uuid(statement.get(), 0, station);
+		cass_statement_bind_string_n(statement.get(), 1, key.data(), key.length());
+		cass_statement_bind_int64(statement.get(), 2, update * 1000);
+		// field 3 intentionally not filled in
+		cass_statement_bind_float(statement.get(), 4, value);
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = true;
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			ret = false;
 		}
 
 		return ret;

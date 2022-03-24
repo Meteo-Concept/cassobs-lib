@@ -434,6 +434,56 @@ namespace meteodata {
 			 */
 			bool deleteDataPoints(const CassUuid& station, const date::sys_days& day, const date::sys_seconds& start, const date::sys_seconds& end);
 
+			/**
+			 * @brief Retrieve the last integer value stored for a given
+			 * station and key
+			 *
+			 * This method also provides the time at which the value was
+			 * last updated.
+			 *
+			 * @param[in] station The station identifier
+			 * @param[in] key The cache key that identifies the value to recover
+			 * @param[out] lastUpdate The last time the value was updated for the station and key
+			 * @param[out] value The value associated to the station and key
+			 */
+			bool getCachedInt(const CassUuid& station, const std::string& key, time_t& lastUpdate, int& value);
+
+			/**
+			 * @brief Retrieve the last floating-point value stored for a given
+			 * station and key
+			 *
+			 * This method also provides the time at which the value was
+			 * last updated.
+			 *
+			 * @param[in] station The station identifier
+			 * @param[in] key The cache key that identifies the value to recover
+			 * @param[out] lastUpdate The last time the value was updated for the station and key
+			 * @param[out] value The value associated to the station and key
+			 */
+			bool getCachedFloat(const CassUuid& station, const std::string& key, time_t& lastUpdate, float& value);
+
+			/**
+			 * @brief Insert an integer value into the cache, replacing the previous
+			 * one, if any and if it's older
+			 *
+			 * @param[in] station The station identifier
+			 * @param[in] key The cache key that identifies the value to recover
+			 * @param[in] update The update time of the new value
+			 * @param[in] value The value associated to the station and key
+			 */
+			bool cacheInt(const CassUuid& station, const std::string& key, const time_t& update, int value);
+
+			/**
+			 * @brief Insert a floating-point value into the cache, replacing the previous
+			 * one, if any and if it's older
+			 *
+			 * @param[in] station The station identifier
+			 * @param[in] key The cache key that identifies the value to recover
+			 * @param[in] update The update time of the new value
+			 * @param[in] value The value associated to the station and key
+			 */
+			bool cacheFloat(const CassUuid& station, const std::string& key, const time_t& update, float value);
+
 		private:
 			/**
 			 * @brief The prepared statement for the getStationByCoords()
@@ -541,6 +591,16 @@ namespace meteodata {
 			 * method
 			 */
 			CassandraStmtPtr _deleteDataPoints;
+			/**
+			 * @brief The prepared statement for the getCachedInt()
+			 * and getCachedFloat() methods
+			 */
+			CassandraStmtPtr _selectCached;
+			/**
+			 * @brief The prepared statement for the cacheInt()
+			 * and cacheFloat() methods
+			 */
+			CassandraStmtPtr _insertIntoCache;
 			/**
 			 * @brief Prepare the Cassandra query/insert statements
 			 */

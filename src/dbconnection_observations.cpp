@@ -310,7 +310,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectStatICTxtStations,
-			"SELECT station, active, host, url, https, tz FROM meteodata.statictxt"
+			"SELECT station, active, host, url, https, tz, sensors FROM meteodata.statictxt"
 		);
 
 		prepareOneStatement(_selectMBDataTxtStations,
@@ -983,7 +983,7 @@ namespace meteodata {
 		);
 	}
 
-	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int>>& stations)
+	bool DbConnectionObservations::getStatICTxtStations(std::vector<std::tuple<CassUuid, std::string, std::string, bool, int, std::map<std::string, std::string>>>& stations)
 	{
 		return performSelect(_selectStatICTxtStations.get(),
 			[&stations](const CassRow* row) {
@@ -1024,8 +1024,31 @@ namespace meteodata {
 					return;
 				int tz;
 				cass_value_get_int32(v, &tz);
+
+				std::map<std::string, std::string> mapping;
+				const CassValue* mappingValue = cass_row_get_column(row, 6);
+				if (!cass_value_is_null(mappingValue)) {
+					std::unique_ptr<CassIterator, void(&)(CassIterator*)> mappingIterator{
+						cass_iterator_from_map(mappingValue),
+						cass_iterator_free
+					};
+					while (cass_iterator_next(mappingIterator.get())) {
+						const char* cKey;
+						std::size_t sKey;
+						cass_value_get_string(cass_iterator_get_map_key(mappingIterator.get()), &cKey, &sKey);
+						std::string key{cKey, sKey};
+
+						const char* cValue;
+						std::size_t sValue;
+						cass_value_get_string(cass_iterator_get_map_value(mappingIterator.get()), &cValue, &sValue);
+						std::string value{cValue, sValue};
+
+						mapping.emplace(key, value);
+					}
+				}
+
 				if (active == cass_true)
-					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz);
+					stations.emplace_back(station, std::string{host, sizeHost}, std::string{url, sizeUrl}, bool(https), tz, mapping);
 			}
 		);
 	}

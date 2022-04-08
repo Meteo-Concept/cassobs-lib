@@ -42,6 +42,16 @@ void Observation::setTimestamp(date::sys_seconds timestamp)
 	time = timestamp;
 }
 
+bool Observation::isValidIntVariable(const std::string& variable)
+{
+	return std::find(VALID_VAR_INTS.begin(), VALID_VAR_INTS.end(), variable) != VALID_VAR_INTS.end();
+}
+
+bool Observation::isValidFloatVariable(const std::string& variable)
+{
+	return std::find(VALID_VAR_FLOATS.begin(), VALID_VAR_FLOATS.end(), variable) != VALID_VAR_FLOATS.end();
+}
+
 void Observation::set(const std::string& column, float value)
 {
 	if (column == "barometer" || column == "pressure") {
@@ -162,9 +172,9 @@ void Observation::set(const std::string& column, int value)
 	} else if (column == "insolation_time") {
 		insolation_time.first = true;
 		insolation_time.second = value;
-    } else if (column == "leafwetness_timeratio1") {
-        leafwetness_timeratio1.first = true;
-        leafwetness_timeratio1.second = value;
+	} else if (column == "leafwetness_timeratio1") {
+		leafwetness_timeratio1.first = true;
+		leafwetness_timeratio1.second = value;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not an integer");
 	}

@@ -82,6 +82,54 @@ public:
 	bool isPresent(const std::string& column) const;
 
 	void filterOutImpossibleValues();
+
+	static bool isValidIntVariable(const std::string& var);
+	static bool isValidFloatVariable(const std::string& var);
+
+private:
+	static constexpr std::array<char const *, 28> VALID_VAR_INTS = {
+		"extrahum1", "extra_humidity1",
+		"extrahum2", "extra_humidity2",
+		"insidehum", "inside_humidity",
+		"leafwetnesses1", "leaf_wetness1",
+		"leafwetnesses2", "leaf_wetness2",
+		"soilmoistures1", "soil_moisture1",
+		"soilmoistures2", "soil_moisture2",
+		"soilmoistures3", "soil_moisture3",
+		"soilmoistures4", "soil_moisture4",
+		"outsidehum", "outside_humidity",
+		"uv", "uv_index",
+		"winddir", "wind_direction",
+		"solarrad", "solar_radiation",
+		"insolation_time",
+		"leafwetness_timeratio1"
+	};
+
+	static constexpr std::array<char const *, 46> VALID_VAR_FLOATS = {
+		"barometer", "pressure",
+		"dewpoint", "dew_point",
+		"extratemp1", "extra_temperature1",
+		"extratemp2", "extra_temperature2",
+		"extratemp3", "extra_temperature3",
+		"heatindex",
+		"insidetemp", "inside_temperature",
+		"leaftemp1", "leaf_temperature1",
+		"leaftemp2", "leaf_temperature2",
+		"outsidetemp", "outside_temperature",
+		"rainrate", "rain_rate",
+		"rainfall",
+		"et", "etp", "evapotranspiration",
+		"soiltemp1", "soil_temp1", "soil_temperature1",
+		"soiltemp2", "soil_temp2", "soil_temperature2",
+		"soiltemp3", "soil_temp3", "soil_temperature3",
+		"soiltemp4", "soil_temp4", "soil_temperature4",
+		"thswindex", "thsw_index",
+		"windchill",
+		"windgust", "windgust_speed",
+		"windspeed", "wind_speed",
+		"min_outside_temperature",
+		"max_outside_temperature"
+	};
 };
 
 template<>

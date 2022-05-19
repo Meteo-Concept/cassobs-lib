@@ -36,7 +36,7 @@ libcassobs2_la_CXXFLAGS =
 libcassobs2_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(DATE_LIBS) $(MYSQL_LIBS)
 libcassobs2_la_LDFLAGS = -version-info 3:0:1
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_cimel_stations
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_cimel_stations compute_minmax
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = \
@@ -92,3 +92,9 @@ get_cimel_stations_SOURCES = \
 get_cimel_stations_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
 get_cimel_stations_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
 get_cimel_stations_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)
+
+compute_minmax_SOURCES = \
+			tests/compute_minmax.cpp
+compute_minmax_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
+compute_minmax_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
+compute_minmax_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)

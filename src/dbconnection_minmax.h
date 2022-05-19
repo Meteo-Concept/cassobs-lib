@@ -212,8 +212,7 @@ inline std::pair<bool,T> computeMean(const std::pair<bool, T>& op1, const std::p
 				"MAX(extratemp3)     AS extraTemp3_max,"
 				"meteodata_v2.sum(rainfall)       AS rainfall,"
 				"MAX(rainrate)       AS rainrate_max"
-			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
-				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time >= ?";
+				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time > ?";
 
 		static constexpr char SELECT_VALUES_BEFORE_6H_STMT[] =
 			"SELECT "
@@ -231,8 +230,7 @@ inline std::pair<bool,T> computeMean(const std::pair<bool, T>& op1, const std::p
 				"MAX(extratemp3)     AS extraTemp3_max,"
 				"meteodata_v2.sum(rainfall)       AS rainfall,"
 				"MAX(rainrate)       AS rainrate_max"
-			//	" FROM meteodata.meteo WHERE station = ? AND time >= ? AND time < ?";
-				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time < ?";
+				" FROM meteodata_v2.meteo WHERE station = ? AND day = ? AND time <= ?";
 
 		static constexpr char SELECT_VALUES_ALL_DAY_STMT[] =
 			"SELECT "

@@ -305,6 +305,10 @@ namespace meteodata {
 			"SELECT station, active, objenious_id, variables FROM meteodata.objenious"
 		);
 
+		prepareOneStatement(_selectLiveobjectsStations,
+			"SELECT station, active, stream_id, topic_prefix FROM meteodata.liveobjects"
+		);
+
 		prepareOneStatement(_selectCimelStations,
 			"SELECT station, active, cimelid, tz FROM meteodata.cimel"
 		);
@@ -1249,6 +1253,42 @@ namespace meteodata {
 
 				if (active == cass_true)
 					stations.emplace_back(station, std::string{objeniousId, sizeObjeniousId}, variables);
+			}
+		);
+	}
+
+	bool DbConnectionObservations::getAllLiveobjectsStations(std::vector<std::tuple<CassUuid, std::string, std::string>>& stations)
+	{
+		return performSelect(_selectObjeniousApiStations.get(),
+			[&stations](const CassRow* row) {
+				 const CassValue* v = cass_row_get_column(row, 0);
+				 if (cass_value_is_null(v))
+					 return;
+				 CassUuid station;
+				 cass_value_get_uuid(v, &station);
+
+				 v = cass_row_get_column(row, 1);
+				 if (cass_value_is_null(v))
+					 return;
+				 cass_bool_t active;
+				 cass_value_get_bool(v, &active);
+
+				 v = cass_row_get_column(row, 2);
+				 if (cass_value_is_null(v))
+					 return;
+				 const char *streamId;
+				 size_t sizeStreamId;
+				 cass_value_get_string(v, &streamId, &sizeStreamId);
+
+				 v = cass_row_get_column(row, 3);
+				 if (cass_value_is_null(v))
+					 return;
+				 const char *topicId;
+				 size_t sizeTopicId;
+				 cass_value_get_string(v, &topicId, &sizeTopicId);
+
+				 if (active == cass_true)
+					 stations.emplace_back(station, std::string{streamId, sizeStreamId}, std::string{topicId, sizeTopicId});
 			}
 		);
 	}

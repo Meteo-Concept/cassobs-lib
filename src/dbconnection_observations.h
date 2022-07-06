@@ -381,7 +381,7 @@ namespace meteodata {
 			 *
 			 * Each station is associated to a tuple (UUID,objeniousId,
 			 * sensors) where 'UUID' is the identifier of the station,
-			 * 'fieldclimate_id' is the identifier for the station in the
+			 * 'objeniousId' is the identifier for the station in the
 			 * FieldClimate API, and 'variables' is a map between
 			 * variables and variables identifiers indicating which part of
 			 * the data in the API returned results must be parsed.
@@ -391,6 +391,22 @@ namespace meteodata {
 			 * @return True if everything went well, false if an error occurred
 			 */
 			bool getAllObjeniousApiStations(std::vector<std::tuple<CassUuid, std::string, std::map<std::string, std::string>>>& stations);
+
+			/**
+			 * @brief Get LiveObjects connection information for all the stations we retrieve the
+			 * data from using the LiveObjects platform by Orange
+			 *
+			 * Each station is associated to a tuple (UUID,streamId,topic)
+			 * where 'UUID' is the identifier of the station,
+			 * 'streamId' is the identifier for the station in the
+			 * LiveObjects API, and topic is the name of the LiveObjects FIFO
+			 * in which the data is available.
+			 *
+			 * @param[out] stations A vector of tuple (UUID, streamId, topic)
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getAllLiveobjectsStations(std::vector<std::tuple<CassUuid, std::string, std::string>>& stations);
 
 			/**
 			 * @brief Get information relative to stations branded by CIMEL
@@ -578,6 +594,11 @@ namespace meteodata {
 			 * getObjeniousApiStations() method
 			 */
 			CassandraStmtPtr _selectObjeniousApiStations;
+			/**
+			 * @brief The prepared statement for the
+			 * getLiveobjectsStations() method
+			 */
+			CassandraStmtPtr _selectLiveobjectsStations;
 			/**
 			 * @brief The prepared statement for the
 			 * getCimelStations() method

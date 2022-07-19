@@ -1259,7 +1259,7 @@ namespace meteodata {
 
 	bool DbConnectionObservations::getAllLiveobjectsStations(std::vector<std::tuple<CassUuid, std::string, std::string>>& stations)
 	{
-		return performSelect(_selectObjeniousApiStations.get(),
+		return performSelect(_selectLiveobjectsStations.get(),
 			[&stations](const CassRow* row) {
 				 const CassValue* v = cass_row_get_column(row, 0);
 				 if (cass_value_is_null(v))

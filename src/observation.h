@@ -26,6 +26,7 @@
 
 #include <ctime>
 #include <string>
+#include <array>
 
 #include <cassandra.h>
 #include <date.h>

@@ -38,12 +38,6 @@ using namespace date;
 
 namespace meteodata {
 
-constexpr char DbConnectionCommon::SELECT_ALL_STATIONS_STMT[];
-constexpr char DbConnectionCommon::SELECT_ALL_STATIONS_FR_STMT[];
-constexpr char DbConnectionCommon::SELECT_WIND_VALUES_STMT[];
-constexpr char DbConnectionCommon::SELECT_STATION_DETAILS_STMT[];
-constexpr char DbConnectionCommon::SELECT_STATION_LOCATION_STMT[];
-
 namespace chrono = std::chrono;
 
 DbConnectionCommon::DbConnectionCommon(const std::string& address, const std::string& user, const std::string& password) :
@@ -53,6 +47,7 @@ DbConnectionCommon::DbConnectionCommon(const std::string& address, const std::st
 	cass_cluster_set_contact_points(_cluster.get(), address.c_str());
 	if (!user.empty() && !password.empty())
 		cass_cluster_set_credentials_n(_cluster.get(), user.c_str(), user.length(), password.c_str(), password.length());
+	cass_cluster_set_prepare_on_all_hosts(_cluster.get(), cass_true);
 	CassFuture* futureConn = cass_session_connect(_session.get(), _cluster.get());
 	CassError rc = cass_future_error_code(futureConn);
 	cass_future_free(futureConn);
@@ -91,6 +86,7 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 {
 	CassFuture* query;
 	CassStatement* statement = cass_prepared_bind(_selectAllStations.get());
+	cass_statement_set_is_idempotent(statement, cass_true);
 	query = cass_session_execute(_session.get(), statement);
 	cass_statement_free(statement);
 
@@ -116,6 +112,7 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 		return ret;
 
 	statement = cass_prepared_bind(_selectAllStationsFr.get());
+	cass_statement_set_is_idempotent(statement, cass_true);
 	query = cass_session_execute(_session.get(), statement);
 	cass_statement_free(statement);
 
@@ -146,6 +143,7 @@ bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& na
 		cass_prepared_bind(_selectStationDetails.get()),
 		cass_statement_free
 	};
+	cass_statement_set_is_idempotent(statement.get(), cass_true);
 	cass_statement_bind_uuid(statement.get(), 0, uuid);
 	std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 		cass_session_execute(_session.get(), statement.get()),
@@ -194,6 +192,7 @@ bool DbConnectionCommon::getStationLocation(const CassUuid& uuid, float& latitud
 		cass_prepared_bind(_selectStationLocation.get()),
 		cass_statement_free
 	};
+	cass_statement_set_is_idempotent(statement.get(), cass_true);
 	cass_statement_bind_uuid(statement.get(), 0, uuid);
 	std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 		cass_session_execute(_session.get(), statement.get()),
@@ -220,74 +219,55 @@ bool DbConnectionCommon::getStationLocation(const CassUuid& uuid, float& latitud
 
 bool DbConnectionCommon::getWindValues(const CassUuid& uuid, const date::sys_days& date, std::vector<std::pair<int,float>>& values)
 {
-	CassFuture* query;
-	CassStatement* statement = cass_prepared_bind(_selectWindValues.get());
-	cass_statement_bind_uuid(statement, 0, uuid);
-	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date));
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
+	return performSelect(_selectWindValues.get(), [this, &values](const CassRow* row) {
+		std::pair<bool, int> dir;
+		std::pair<bool, float> speed;
+		storeCassandraInt(row, 0, dir);
+		storeCassandraFloat(row, 1, speed);
+		if (dir.first && speed.first)
+			values.emplace_back(dir.second, speed.second);
+	});
+}
 
-	bool ret = false;
-	const CassResult* result = cass_future_get_result(query);
-	CassIterator* it = cass_iterator_from_result(result);
-	while(cass_iterator_next(it)) {
-		const CassRow* row = cass_iterator_get_row(it);
-		if (row) {
-			std::pair<bool, int> dir;
-			std::pair<bool, float> speed;
-			storeCassandraInt(row, 0, dir);
-			storeCassandraFloat(row, 1, speed);
-			if (dir.first && speed.first)
-				values.emplace_back(dir.second, speed.second);
+bool DbConnectionCommon::performSelect(const CassPrepared* stmt, const std::function<void(const CassRow*)>& rowHandler)
+{
+	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+		cass_prepared_bind(stmt),
+		cass_statement_free
+	};
+	cass_statement_set_is_idempotent(statement.get(), cass_true);
+
+	cass_bool_t hasMorePages = cass_true;
+	bool ret = true;
+	while (ret && hasMorePages) {
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+		ret = false;
+		if (result) {
+			std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
+				cass_iterator_from_result(result.get()),
+				cass_iterator_free
+			};
+			while (cass_iterator_next(iterator.get())) {
+				const CassRow* row = cass_iterator_get_row(iterator.get());
+				if (row)
+					rowHandler(row);
+			}
+			ret = true;
+
+			hasMorePages = cass_result_has_more_pages(result.get());
+			if (hasMorePages) {
+				cass_statement_set_paging_state(statement.get(), result.get());
+			}
 		}
 	}
-	ret = true;
-	cass_iterator_free(it);
-	cass_result_free(result);
-	cass_future_free(query);
-
 
 	return ret;
 }
-
-	bool DbConnectionCommon::performSelect(const CassPrepared* stmt, const std::function<void(const CassRow*)>& rowHandler)
-	{
-		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-			cass_prepared_bind(stmt),
-			cass_statement_free
-		};
-
-		cass_bool_t hasMorePages = cass_true;
-		bool ret = true;
-		while (ret && hasMorePages) {
-			std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-				cass_session_execute(_session.get(), statement.get()),
-				cass_future_free
-			};
-			std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-				cass_future_get_result(query.get()),
-				cass_result_free
-			};
-			ret = false;
-			if (result) {
-				std::unique_ptr<CassIterator, void(&)(CassIterator*)> iterator{
-					cass_iterator_from_result(result.get()),
-					cass_iterator_free
-				};
-				while (cass_iterator_next(iterator.get())) {
-					const CassRow* row = cass_iterator_get_row(iterator.get());
-					if (row)
-						rowHandler(row);
-				}
-				ret = true;
-
-				hasMorePages = cass_result_has_more_pages(result.get());
-				if (hasMorePages) {
-					cass_statement_set_paging_state(statement.get(), result.get());
-				}
-			}
-		}
-
-		return ret;
-	}
 }

@@ -353,6 +353,7 @@ namespace meteodata {
 			cass_prepared_bind(_selectLastDataBefore.get()),
 			cass_statement_free
 		};
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(boundary));
 		cass_statement_bind_int64(statement.get(), 2, boundary * 1000);
@@ -420,6 +421,7 @@ namespace meteodata {
 			cass_prepared_bind(_selectStationByCoords.get()),
 			cass_statement_free
 		};
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 		cass_statement_bind_int32(statement.get(), 0, elevation);
 		cass_statement_bind_int32(statement.get(), 1, latitude);
 		cass_statement_bind_int32(statement.get(), 2, longitude);
@@ -450,6 +452,7 @@ namespace meteodata {
 			cass_prepared_bind(_selectStationCoordinates.get()),
 			cass_statement_free
 		};
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 			cass_session_execute(_session.get(), statement.get()),
@@ -1336,6 +1339,7 @@ namespace meteodata {
 			cass_prepared_bind(_getRainfall.get()),
 			cass_statement_free
 		};
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 
 		date::sys_seconds day(date::floor<date::days>(chrono::system_clock::from_time_t(begin)));
 		date::sys_seconds final{chrono::seconds(end)};
@@ -1413,6 +1417,7 @@ namespace meteodata {
 			cass_statement_free
 		};
 
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(boundary));
 		cass_statement_bind_int64(statement.get(), 2, boundary * 1000);
@@ -1451,6 +1456,7 @@ namespace meteodata {
 			cass_statement_free
 		};
 
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_uint32(statement.get(), 1, cass_date_from_epoch(boundary));
 		cass_statement_bind_int64(statement.get(), 2, boundary * 1000);
@@ -1489,6 +1495,7 @@ namespace meteodata {
 			cass_statement_free
 		};
 
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_string_n(statement.get(), 1, key.data(), key.length());
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
@@ -1536,6 +1543,7 @@ namespace meteodata {
 			cass_statement_free
 		};
 
+		cass_statement_set_is_idempotent(statement.get(), cass_true);
 		cass_statement_bind_uuid(statement.get(), 0, station);
 		cass_statement_bind_string_n(statement.get(), 1, key.data(), key.length());
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{

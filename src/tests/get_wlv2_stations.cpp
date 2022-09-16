@@ -61,7 +61,7 @@ int main()
 	cass_log_set_callback(logCallback, NULL);
 
 	DbConnectionObservations db(dataAddress, dataUser, dataPassword);
-	std::vector<std::tuple<CassUuid, bool, std::map<int, CassUuid>, std::string>> v;
+	std::vector<std::tuple<CassUuid, bool, std::map<int, CassUuid>, std::string, std::map<int, std::map<std::string, std::string>>>> v;
 	db.getAllWeatherlinkAPIv2Stations(v);
 	for (const auto& s: v) {
 		char uuid[CASS_UUID_STRING_LENGTH];
@@ -74,11 +74,23 @@ int main()
 			for (const auto& m : mapping) {
 				char uuid2[CASS_UUID_STRING_LENGTH];
 				cass_uuid_string(m.second, uuid2);
-				std::cout << "\tsensor " << m.first << " : " << "station " << uuid2 << "\n";
+				std::cout << "\tsensor " << m.first << ": " << "station " << uuid2 << "\n";
 			}
 		} else {
 			std::cout << "\tNo mapping\n";
 		}
 		std::cout << "\twl id " << std::get<3>(s) << "\n";
+
+		const std::map<int, std::map<std::string, std::string>>& parsers = std::get<4>(s);
+		if (!parsers.empty()) {
+			for (const auto& p : parsers) {
+				std::cout << "\nparser for " << p.first << " :\n";
+				for (const auto& v: p.second) {
+					std::cout << "\tvariable " << v.first << ": " << v.second << "\n";
+				}
+			}
+		} else {
+			std::cout << "\tNo dedicated parser\n";
+		}
 	}
 }

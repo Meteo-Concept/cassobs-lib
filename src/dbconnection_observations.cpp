@@ -290,7 +290,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectWeatherlinkAPIv2Stations,
-			"SELECT station, active, archived, substations, weatherlink_id FROM meteodata.weatherlink_apiv2"
+			"SELECT station, active, archived, substations, weatherlink_id, parsers FROM meteodata.weatherlink_apiv2"
 		);
 
 		prepareOneStatement(_selectMqttStations,
@@ -876,7 +876,8 @@ namespace meteodata {
 		);
 	}
 
-	bool DbConnectionObservations::getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::map<int, CassUuid>, std::string>>& stations)
+	bool DbConnectionObservations::getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::map<int, CassUuid>, std::string,
+																  std::map<int, std::map<std::string, std::string>> >>& stations)
 	{
 		return performSelect(_selectWeatherlinkAPIv2Stations.get(),
 			[&stations](const CassRow* row) {
@@ -920,8 +921,42 @@ namespace meteodata {
 				const char *weatherlinkId;
 				size_t sizeWeatherlinkId;
 				cass_value_get_string(v, &weatherlinkId, &sizeWeatherlinkId);
+
+
+				std::map<int, std::map<std::string, std::string>> parsers;
+				const CassValue* parsersValue = cass_row_get_column(row, 5);
+				if (!cass_value_is_null(parsersValue)) {
+					std::unique_ptr<CassIterator, void(&)(CassIterator*)> parsersIterator{
+						cass_iterator_from_map(parsersValue),
+						cass_iterator_free
+					};
+					while (cass_iterator_next(parsersIterator.get())) {
+						int sensorId;
+						cass_value_get_int32(cass_iterator_get_map_key(parsersIterator.get()), &sensorId);
+
+						std::map<std::string, std::string> parser;
+						std::unique_ptr<CassIterator, void(&)(CassIterator*)> variablesIterator{
+								cass_iterator_from_map(cass_iterator_get_map_value(parsersIterator.get())),
+								cass_iterator_free
+						};
+						while (cass_iterator_next(variablesIterator.get())) {
+							const char *category;
+							size_t sizeCategory;
+							cass_value_get_string(cass_iterator_get_map_key(variablesIterator.get()), &category, &sizeCategory);
+
+							const char *variable;
+							size_t sizeVariable;
+							cass_value_get_string(cass_iterator_get_map_value(variablesIterator.get()), &variable, &sizeVariable);
+
+							parser.emplace(std::string{category, sizeCategory}, std::string{variable, sizeVariable});
+						}
+						parsers.emplace(sensorId, std::move(parser));
+					}
+				}
+
 				if (active == cass_true)
-					stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, mapping, std::string{weatherlinkId, sizeWeatherlinkId});
+					stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, std::move(mapping),
+										  std::string{weatherlinkId, sizeWeatherlinkId}, std::move(parsers));
 			}
 		);
 	}

@@ -42,6 +42,9 @@ namespace chrono = std::chrono;
 
 class DbConnectionCommon
 {
+	private:
+		inline static void noParametersUsed(CassStatement* stmt) { }
+
 	public:
 		/**
 		 * @brief Construct a connection to the database
@@ -256,7 +259,7 @@ class DbConnectionCommon
 		 */
 		void prepareOneStatement(CassandraStmtPtr& stmt, const std::string& query);
 
-		bool performSelect(const CassPrepared* stmt, const std::function<void(const CassRow*)>& rowHandler);
+		bool performSelect(const CassPrepared* stmt, const std::function<void(const CassRow*)>& rowHandler, const std::function<void(CassStatement*)>& parameterBinder = &noParametersUsed);
 
 	private:
 		/**

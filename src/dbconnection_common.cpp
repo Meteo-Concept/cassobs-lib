@@ -84,158 +84,103 @@ void DbConnectionCommon::prepareStatements()
 
 bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 {
-	CassFuture* query;
-	CassStatement* statement = cass_prepared_bind(_selectAllStations.get());
-	cass_statement_set_is_idempotent(statement, cass_true);
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
-
-	const CassResult* result = cass_future_get_result(query);
-	bool ret = false;
-	if (result) {
-		CassIterator* iterator = cass_iterator_from_result(result);
-		CassUuid uuid;
-		while (cass_iterator_next(iterator)) {
-			const CassRow* row = cass_iterator_get_row(iterator);
-			if (row) {
-				cass_value_get_uuid(cass_row_get_column(row, 0), &uuid);
-				stations.push_back(uuid);
-			}
+	bool ret = performSelect(_selectAllStations.get(),
+		[&](const CassRow* row) {
+			CassUuid uuid;
+			cass_value_get_uuid(cass_row_get_column(row, 0), &uuid);
+			stations.push_back(uuid);
 		}
-		ret = true;
-		cass_iterator_free(iterator);
-	}
-	cass_result_free(result);
-	cass_future_free(query);
+	);
 
 	if (!ret)
-		return ret;
+		return false;
 
-	statement = cass_prepared_bind(_selectAllStationsFr.get());
-	cass_statement_set_is_idempotent(statement, cass_true);
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
-
-	result = cass_future_get_result(query);
-	ret = false;
-	if (result) {
-		CassIterator* iterator = cass_iterator_from_result(result);
-		CassUuid uuid;
-		while (cass_iterator_next(iterator)) {
-			const CassRow* row = cass_iterator_get_row(iterator);
-			if (row) {
-				cass_value_get_uuid(cass_row_get_column(row, 0), &uuid);
-				stations.push_back(uuid);
-			}
+	ret = performSelect(_selectAllStationsFr.get(),
+		[&](const CassRow* row) {
+			CassUuid uuid;
+			cass_value_get_uuid(cass_row_get_column(row, 0), &uuid);
+			stations.push_back(uuid);
 		}
-		ret = true;
-		cass_iterator_free(iterator);
-	}
-	cass_result_free(result);
-	cass_future_free(query);
+	);
 
 	return ret;
 }
 
 bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
 {
-	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-		cass_prepared_bind(_selectStationDetails.get()),
-		cass_statement_free
-	};
-	cass_statement_set_is_idempotent(statement.get(), cass_true);
-	cass_statement_bind_uuid(statement.get(), 0, uuid);
-	std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-		cass_session_execute(_session.get(), statement.get()),
-		cass_future_free
-	};
-	std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-		cass_future_get_result(query.get()),
-		cass_result_free
-	};
-
-	bool ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result.get());
-		if (row) {
+	return performSelect(_selectStationDetails.get(),
+		[&](const CassRow* row) {
 			const CassValue* v = cass_row_get_column(row, 0);
 			if (cass_value_is_null(v))
-				return false;
+				return;
 			const char* stationName;
 			size_t size;
 			cass_value_get_string(v, &stationName, &size);
 
 			v = cass_row_get_column(row, 1);
 			if (cass_value_is_null(v))
-				return false;
+				return;
 			cass_value_get_int32(v, &pollPeriod);
 
 			v = cass_row_get_column(row, 2);
 			if (cass_value_is_null(v))
-				return false;
+				return;
 			cass_int64_t timeMillisec;
 			cass_value_get_int64(v, &timeMillisec);
 			lastArchiveDownloadTime = timeMillisec/1000;
 
 			name.clear();
 			name.insert(0, stationName, size);
-			ret = true;
+		},
+		[&](CassStatement* stmt) {
+			cass_statement_bind_uuid(stmt, 0, uuid);
 		}
-	}
-
-	return ret;
+	);
 }
 
 bool DbConnectionCommon::getStationLocation(const CassUuid& uuid, float& latitude, float& longitude, int& elevation)
 {
-	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
-		cass_prepared_bind(_selectStationLocation.get()),
-		cass_statement_free
-	};
-	cass_statement_set_is_idempotent(statement.get(), cass_true);
-	cass_statement_bind_uuid(statement.get(), 0, uuid);
-	std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
-		cass_session_execute(_session.get(), statement.get()),
-		cass_future_free
-	};
-	std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
-		cass_future_get_result(query.get()),
-		cass_result_free
-	};
-
-	bool ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result.get());
-		if (row) {
+	return performSelect(_selectStationLocation.get(),
+		[&](const CassRow* row) {
 			cass_value_get_float(cass_row_get_column(row,0), &latitude);
 			cass_value_get_float(cass_row_get_column(row,1), &longitude);
 			cass_value_get_int32(cass_row_get_column(row,2), &elevation);
-			ret = true;
+		},
+		[&](CassStatement* stmt) {
+			cass_statement_bind_uuid(stmt, 0, uuid);
 		}
-	}
-
-	return ret;
+	);
 }
 
 bool DbConnectionCommon::getWindValues(const CassUuid& uuid, const date::sys_days& date, std::vector<std::pair<int,float>>& values)
 {
-	return performSelect(_selectWindValues.get(), [this, &values](const CassRow* row) {
-		std::pair<bool, int> dir;
-		std::pair<bool, float> speed;
-		storeCassandraInt(row, 0, dir);
-		storeCassandraFloat(row, 1, speed);
-		if (dir.first && speed.first)
-			values.emplace_back(dir.second, speed.second);
-	});
+	return performSelect(_selectWindValues.get(),
+		[this, &values](const CassRow* row) {
+			std::pair<bool, int> dir;
+			std::pair<bool, float> speed;
+			storeCassandraInt(row, 0, dir);
+			storeCassandraFloat(row, 1, speed);
+			if (dir.first && speed.first)
+				values.emplace_back(dir.second, speed.second);
+		},
+		[&](CassStatement* stmt) {
+			cass_statement_bind_uuid(stmt, 0, uuid);
+			cass_statement_bind_uint32(stmt, 1, from_sysdays_to_CassandraDate(date));
+		}
+	);
 }
 
-bool DbConnectionCommon::performSelect(const CassPrepared* stmt, const std::function<void(const CassRow*)>& rowHandler)
+bool DbConnectionCommon::performSelect(const CassPrepared* stmt,
+	const std::function<void(const CassRow*)>& rowHandler,
+	const std::function<void(CassStatement*)>& parameterBinder
+	)
 {
 	std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 		cass_prepared_bind(stmt),
 		cass_statement_free
 	};
 	cass_statement_set_is_idempotent(statement.get(), cass_true);
+	parameterBinder(statement.get());
 
 	cass_bool_t hasMorePages = cass_true;
 	bool ret = true;

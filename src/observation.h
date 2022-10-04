@@ -62,12 +62,24 @@ public:
 	std::pair<bool,int  > uv                       = {false,0};
 	std::pair<bool,float> windchill                = {false,0};
 	std::pair<bool,int  > winddir                  = {false,0};
-    std::pair<bool,float> windgust                 = {false,0};
+	std::pair<bool,float> windgust                 = {false,0};
 	std::pair<bool,float> windspeed                = {false,0};
 	std::pair<bool,int  > insolation_time          = {false,0};
-    std::pair<bool,float> min_outside_temperature  = {false,0};
-    std::pair<bool,float> max_outside_temperature  = {false,0};
-    std::pair<bool,int  > leafwetness_timeratio1   = {false,0};
+	std::pair<bool,float> min_outside_temperature  = {false,0};
+	std::pair<bool,float> max_outside_temperature  = {false,0};
+	std::pair<bool,int  > leafwetness_timeratio1   = {false,0};
+	std::pair<bool,float> soilmoistures10cm        = {false,0};
+	std::pair<bool,float> soilmoistures20cm        = {false,0};
+	std::pair<bool,float> soilmoistures30cm        = {false,0};
+	std::pair<bool,float> soilmoistures40cm        = {false,0};
+	std::pair<bool,float> soilmoistures50cm        = {false,0};
+	std::pair<bool,float> soilmoistures60cm        = {false,0};
+	std::pair<bool,float> soiltemp10cm             = {false,0};
+	std::pair<bool,float> soiltemp20cm             = {false,0};
+	std::pair<bool,float> soiltemp30cm             = {false,0};
+	std::pair<bool,float> soiltemp40cm             = {false,0};
+	std::pair<bool,float> soiltemp50cm             = {false,0};
+	std::pair<bool,float> soiltemp60cm             = {false,0};
 
 	template<typename ColumnType>
 	ColumnType get(const std::string& column) const
@@ -106,7 +118,7 @@ private:
 		"leafwetness_timeratio1"
 	};
 
-	static constexpr std::array<char const *, 46> VALID_VAR_FLOATS = {
+	static constexpr std::array<char const *, 76> VALID_VAR_FLOATS = {
 		"barometer", "pressure",
 		"dewpoint", "dew_point",
 		"extratemp1", "extra_temperature1",
@@ -129,7 +141,19 @@ private:
 		"windgust", "windgust_speed",
 		"windspeed", "wind_speed",
 		"min_outside_temperature",
-		"max_outside_temperature"
+		"max_outside_temperature",
+		"soilmoistures10cm", "soil_moisture_10cm",
+		"soilmoistures20cm", "soil_moisture_20cm",
+		"soilmoistures30cm", "soil_moisture_30cm",
+		"soilmoistures40cm", "soil_moisture_40cm",
+		"soilmoistures50cm", "soil_moisture_50cm",
+		"soilmoistures60cm", "soil_moisture_60cm",
+		"soiltemp10cm", "soil_temp_10cm", "soil_temperature_10cm",
+		"soiltemp20cm", "soil_temp_20cm", "soil_temperature_20cm",
+		"soiltemp30cm", "soil_temp_30cm", "soil_temperature_30cm",
+		"soiltemp40cm", "soil_temp_40cm", "soil_temperature_40cm",
+		"soiltemp50cm", "soil_temp_50cm", "soil_temperature_50cm",
+		"soiltemp60cm", "soil_temp_60cm", "soil_temperature_60cm"
 	};
 };
 

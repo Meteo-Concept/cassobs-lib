@@ -88,7 +88,13 @@ namespace meteodata {
 			"uv,"
 			"windchill,"
 			"winddir, windgust, windspeed,"
-			"insolation_time "
+			"insolation_time, "
+			"soilmoistures10cm, soilmoistures20cm, "
+			"soilmoistures30cm, soilmoistures40cm, "
+			"soilmoistures50cm, soilmoistures60cm, "
+			"soiltemp10cm, soiltemp20cm, "
+			"soiltemp30cm, soiltemp40cm, "
+			"soiltemp50cm, soiltemp60cm "
 			" FROM meteodata_v2.meteo WHERE station = ? "
 			" AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1"
 		);
@@ -118,7 +124,14 @@ namespace meteodata {
 			"winddir, windgust, windspeed,"
 			"insolation_time,"
 			"min_outside_temperature, max_outside_temperature,"
-			"leafwetnesses_timeratio1) "
+			"leafwetnesses_timeratio1, "
+			"soilmoistures10cm, soilmoistures20cm, "
+			"soilmoistures30cm, soilmoistures40cm, "
+			"soilmoistures50cm, soilmoistures60cm, "
+			"soiltemp10cm, soiltemp20cm, "
+			"soiltemp30cm, soiltemp40cm, "
+			"soiltemp50cm, soiltemp60cm "
+			") "
 			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
@@ -143,7 +156,12 @@ namespace meteodata {
 			"?, ?, ?,"	// "winddir, windgust, windspeed,"
 			"?,"		// "insolation_time"
 			"?,?,"		// "min_outside_temperature, max_outside_temperature"
-			"?)"		// "leafwetnesses_timeratio1"
+			"?,?,?,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
+			"?,?,?,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
+			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
+			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"?"		// "leafwetnesses_timeratio1"
+			")"
 		);
 
 		prepareOneStatement(_insertV2FilteredDataPoint,
@@ -171,7 +189,14 @@ namespace meteodata {
 			"winddir, windgust, windspeed,"
 			"insolation_time,"
 			"min_outside_temperature, max_outside_temperature,"
-			"leafwetnesses_timeratio1) "
+			"leafwetnesses_timeratio1, "
+			"soilmoistures10cm, soilmoistures20cm, "
+			"soilmoistures30cm, soilmoistures40cm, "
+			"soilmoistures50cm, soilmoistures60cm, "
+			"soiltemp10cm, soiltemp20cm, "
+			"soiltemp30cm, soiltemp40cm, "
+			"soiltemp50cm, soiltemp60cm "
+			") "
 			" VALUES ("
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
@@ -196,7 +221,12 @@ namespace meteodata {
 			"?, ?, ?,"	// "winddir, windgust, windspeed,"
 			"?,"		// "insolation_time"
 			"?,?,"		// "min_outside_temperature, max_outside_temperature"
-			"?)"		// "leafwetnesses_timeratio1"
+			"?,"		// "leafwetnesses_timeratio1"
+			"?,?,?,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
+			"?,?,?,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
+			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
+			"?,?,?"		// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			")"
 		);
 
 		prepareOneStatement(_insertEntireDayValues,
@@ -387,7 +417,11 @@ namespace meteodata {
 						"extratemp3", "heatindex", "insidetemp", "leaftemp1",
 						"leaftemp2", "outsidetemp", "rainrate", "rainfall",
 						"et", "soiltemp1", "soiltemp2", "soiltemp3", "soiltemp4",
-						"thswindex", "windchill", "windgust", "windspeed"
+						"thswindex", "windchill", "windgust", "windspeed",
+						"soilmoistures10cm", "soilmoistures20cm", "soilmoistures30cm",
+						"soilmoistures40cm", "soilmoistures50cm", "soilmoistures60cm",
+						"soiltemp10cm", "soiltemp20cm", "soiltemp30cm",
+						"soiltemp40cm", "soiltemp50cm", "soiltemp60cm"
 					}) {
 					value = cass_row_get_column_by_name(row, var);
 					if (!cass_value_is_null(value)) {
@@ -606,6 +640,32 @@ namespace meteodata {
 		/*************************************************************/
 		if (obs.leafwetness_timeratio1.first)
 			cass_statement_bind_int32(statement, 40, obs.leafwetness_timeratio1.second);
+		/*************************************************************/
+		if (obs.soilmoistures10cm.first)
+			cass_statement_bind_float(statement, 41, obs.soilmoistures10cm.second);
+		if (obs.soilmoistures20cm.first)
+			cass_statement_bind_float(statement, 42, obs.soilmoistures20cm.second);
+		if (obs.soilmoistures30cm.first)
+			cass_statement_bind_float(statement, 43, obs.soilmoistures30cm.second);
+		if (obs.soilmoistures40cm.first)
+			cass_statement_bind_float(statement, 44, obs.soilmoistures40cm.second);
+		if (obs.soilmoistures50cm.first)
+			cass_statement_bind_float(statement, 45, obs.soilmoistures50cm.second);
+		if (obs.soilmoistures60cm.first)
+			cass_statement_bind_float(statement, 46, obs.soilmoistures60cm.second);
+		/*************************************************************/
+		if (obs.soiltemp10cm.first)
+			cass_statement_bind_float(statement, 47, obs.soiltemp10cm.second);
+		if (obs.soiltemp20cm.first)
+			cass_statement_bind_float(statement, 48, obs.soiltemp20cm.second);
+		if (obs.soiltemp30cm.first)
+			cass_statement_bind_float(statement, 49, obs.soiltemp30cm.second);
+		if (obs.soiltemp40cm.first)
+			cass_statement_bind_float(statement, 50, obs.soiltemp40cm.second);
+		if (obs.soiltemp50cm.first)
+			cass_statement_bind_float(statement, 51, obs.soiltemp50cm.second);
+		if (obs.soiltemp60cm.first)
+			cass_statement_bind_float(statement, 52, obs.soiltemp60cm.second);
 		/*************************************************************/
 	}
 
@@ -877,7 +937,7 @@ namespace meteodata {
 	}
 
 	bool DbConnectionObservations::getAllWeatherlinkAPIv2Stations(std::vector<std::tuple<CassUuid, bool, std::map<int, CassUuid>, std::string,
-																  std::map<int, std::map<std::string, std::string>> >>& stations)
+			std::map<int, std::map<std::string, std::string>> >>& stations)
 	{
 		return performSelect(_selectWeatherlinkAPIv2Stations.get(),
 			[&stations](const CassRow* row) {
@@ -956,7 +1016,7 @@ namespace meteodata {
 
 				if (active == cass_true)
 					stations.emplace_back(station, archived == cass_true /* wierd way to cast to bool */, std::move(mapping),
-										  std::string{weatherlinkId, sizeWeatherlinkId}, std::move(parsers));
+							std::string{weatherlinkId, sizeWeatherlinkId}, std::move(parsers));
 			}
 		);
 	}

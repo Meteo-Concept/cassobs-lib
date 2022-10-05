@@ -156,11 +156,11 @@ namespace meteodata {
 			"?, ?, ?,"	// "winddir, windgust, windspeed,"
 			"?,"		// "insolation_time"
 			"?,?,"		// "min_outside_temperature, max_outside_temperature"
+			"?,"		// "leafwetnesses_timeratio1"
 			"?,?,?,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
 			"?,?,?,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
-			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
-			"?"		// "leafwetnesses_timeratio1"
+			"?,?,? "	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
 			")"
 		);
 
@@ -225,7 +225,7 @@ namespace meteodata {
 			"?,?,?,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
 			"?,?,?,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
-			"?,?,?"		// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"?,?,? "	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
 			")"
 		);
 

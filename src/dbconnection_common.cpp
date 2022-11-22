@@ -106,7 +106,7 @@ bool DbConnectionCommon::getAllStations(std::vector<CassUuid>& stations)
 	return ret;
 }
 
-bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
+bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, bool* storeInsideMeasurements)
 {
 	return performSelect(_selectStationDetails.get(),
 		[&](const CassRow* row) {
@@ -131,6 +131,17 @@ bool DbConnectionCommon::getStationDetails(const CassUuid& uuid, std::string& na
 
 			name.clear();
 			name.insert(0, stationName, size);
+
+			if (storeInsideMeasurements) {
+				v = cass_row_get_column(row, 3);
+				if (cass_value_is_null(v)) {
+					*storeInsideMeasurements = false;
+				} else {
+					cass_bool_t store;
+					cass_value_get_bool(v, &store);
+					*storeInsideMeasurements = store == cass_true;
+				}
+			}
 		},
 		[&](CassStatement* stmt) {
 			cass_statement_bind_uuid(stmt, 0, uuid);

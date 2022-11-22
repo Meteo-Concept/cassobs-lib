@@ -449,7 +449,8 @@ namespace meteodata {
 		return ret;
 	}
 
-	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime)
+	bool DbConnectionObservations::getStationByCoords(int elevation, int latitude, int longitude, CassUuid& station,
+		std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, bool* storeInsideMeasurements)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
 			cass_prepared_bind(_selectStationByCoords.get()),
@@ -473,7 +474,7 @@ namespace meteodata {
 			const CassRow* row = cass_result_first_row(result.get());
 			if (row) {
 				cass_value_get_uuid(cass_row_get_column(row,0), &station);
-				ret = getStationDetails(station, name, pollPeriod, lastArchiveDownloadTime);
+				ret = getStationDetails(station, name, pollPeriod, lastArchiveDownloadTime, storeInsideMeasurements);
 			}
 		}
 
@@ -572,9 +573,11 @@ namespace meteodata {
 		if (obs.heatindex.first)
 			cass_statement_bind_float(statement, 10, obs.heatindex.second);
 		/*************************************************************/
-		// Do not record inside hum
+		if (obs.insidehum.first)
+			cass_statement_bind_int32(statement, 11, obs.insidehum.second);
 		/*************************************************************/
-		// Do not record inside temp
+		if (obs.insidetemp.first)
+			cass_statement_bind_float(statement, 12, obs.insidetemp.second);
 		/*************************************************************/
 		for (int i=0 ; i<2 ; i++) {
 			if (obs.leaftemp[i].first)

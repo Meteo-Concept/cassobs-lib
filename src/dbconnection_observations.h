@@ -74,10 +74,11 @@ namespace meteodata {
 			 * @param[out] name The common name given to the station
 			 * @param[out] pollPeriod The period of time between two measurements from the station
 			 * @param[out] lastArchiveDownloadTime The timestamp of the last archive entry downloaded from the station (in station's time)
+			 * @param[out] storeInsideMeasurements Whether we have the authorization to store inside measurements from the station
 			 *
 			 * @return The boolean value true if everything went well, false if an error occurred
 			 */
-			bool getStationByCoords(int latitude, int longitude, int altitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime);
+			bool getStationByCoords(int latitude, int longitude, int altitude, CassUuid& station, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, bool* storeInsideMeasurements = nullptr);
 
 			/**
 			 * @brief Get the coordinates of a station

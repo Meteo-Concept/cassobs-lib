@@ -70,10 +70,12 @@ class DbConnectionCommon
 		 * measurements)
 		 * @param[out] lastArchiveDownloadTime The timestamp of the
 		 * last archive entry downloaded from the database
+		 * @param[out] storeInsideMeasurements Whether we have the authorization
+		 * to collect inside temp/hum measurements from the station
 		 *
 		 * @return True if, and only if, all went well
 		 */
-		bool getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime);
+		bool getStationDetails(const CassUuid& uuid, std::string& name, int& pollPeriod, time_t& lastArchiveDownloadTime, bool* storeInsideMeasurements = nullptr);
 		/**
 		 * @brief Get the latitude, longitude and elevation of the station
 		 *
@@ -281,7 +283,7 @@ class DbConnectionCommon
 		/**
 		 * @brief The raw query string to select the individual details of a station from the database
 		 */
-		static constexpr char SELECT_STATION_DETAILS_STMT[] = "SELECT name,polling_period,last_archive_download FROM meteodata.stations WHERE id = ?";
+		static constexpr char SELECT_STATION_DETAILS_STMT[] = "SELECT name,polling_period,last_archive_download,store_inside_measurements FROM meteodata.stations WHERE id = ?";
 		/**
 		 * @brief The prepared statement for the getStationDetails()
 		 * method

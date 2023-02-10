@@ -485,16 +485,16 @@ void Observation::filterOutImpossibleValues()
 		&& dewpoint.second >= Filter::MIN_AIR_TEMPERATURE
 		&& dewpoint.second <= Filter::MAX_AIR_TEMPERATURE;
 	/*************************************************************/
-	for (int i=0 ; i<2 ; i++) {
-		extrahum[i].first = extrahum[i].first
-			&& extrahum[i].second >= Filter::MIN_HUMIDITY
-			&& extrahum[i].second <= Filter::MAX_HUMIDITY;
+	for (auto& hum : extrahum) {
+		hum.first = hum.first
+			&& hum.second >= Filter::MIN_HUMIDITY
+			&& hum.second <= Filter::MAX_HUMIDITY;
 	}
 	/*************************************************************/
-	for (int i=0 ; i<3 ; i++) {
-		extratemp[i].first = extratemp[i].first
-			&& extratemp[i].second >= Filter::MIN_AIR_TEMPERATURE
-			&& extratemp[i].second <= Filter::MAX_AIR_TEMPERATURE;
+	for (auto& temp : extratemp) {
+		temp.first = temp.first
+			&& temp.second >= Filter::MIN_AIR_TEMPERATURE
+			&& temp.second <= Filter::MAX_AIR_TEMPERATURE;
 	}
 	/*************************************************************/
 	heatindex.first = heatindex.first
@@ -514,6 +514,11 @@ void Observation::filterOutImpossibleValues()
 			&& leafwetnesses[i].second <= Filter::MAX_AIR_TEMPERATURE;
 	}
 	/*************************************************************/
+	// special case for humidity, try to cap the value if it's not too much
+	// above 100%, some sensors can derive rather quickly but we should not
+	// discard the measurement outright
+	if (outsidehum.second > Filter::MAX_HUMIDITY && outsidehum.second <= Filter::MAX_HUMIDITY * 1.2)
+		outsidehum.second = Filter::MAX_HUMIDITY;
 	outsidehum.first = outsidehum.first
 		&& outsidehum.second >= Filter::MIN_HUMIDITY
 		&& outsidehum.second <= Filter::MAX_HUMIDITY;
@@ -534,16 +539,16 @@ void Observation::filterOutImpossibleValues()
 		&& et.second >= Filter::MIN_ET
 		&& et.second <= Filter::MAX_ET;
 	/*************************************************************/
-	for (int i=0 ; i<4 ; i++) {
-		soilmoistures[i].first = soilmoistures[i].first
-			&& soilmoistures[i].second >= Filter::MIN_SOILMOISTURE
-			&& soilmoistures[i].second <= Filter::MAX_SOILMOISTURE;
+	for (auto& soilmoisture : soilmoistures) {
+		soilmoisture.first = soilmoisture.first
+			&& soilmoisture.second >= Filter::MIN_SOILMOISTURE
+			&& soilmoisture.second <= Filter::MAX_SOILMOISTURE;
 	}
 	/*************************************************************/
-	for (int i=0 ; i<4 ; i++) {
-		soiltemp[i].first = soiltemp[i].first
-			&& soiltemp[i].second >= Filter::MIN_SOIL_TEMPERATURE
-			&& soiltemp[i].second <= Filter::MAX_SOIL_TEMPERATURE;
+	for (auto& i : soiltemp) {
+		i.first = i.first
+			&& i.second >= Filter::MIN_SOIL_TEMPERATURE
+			&& i.second <= Filter::MAX_SOIL_TEMPERATURE;
 	}
 	/*************************************************************/
 	solarrad.first = solarrad.first

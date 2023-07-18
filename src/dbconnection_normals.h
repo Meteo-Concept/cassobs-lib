@@ -53,7 +53,7 @@ public:
 	 * @param password the password corresponding to the username
 	 * @param database the password corresponding to the username
 	 */
-	DbConnectionNormals(const std::string& address = "127.0.0.1", const std::string& user = "", const std::string& password = "", const std::string& database = "meteodata_beta");
+	DbConnectionNormals(const std::string& address = "127.0.0.1", const std::string& user = "", const std::string& password = "", const std::string& database = "observations2020");
 	/**
 	 * @brief Close the connection and destroy the database handle
 	 */
@@ -168,6 +168,7 @@ private:
 
 	static constexpr size_t STRING_SIZE=191;
 };
+
 }
 
 #endif

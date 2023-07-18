@@ -9,7 +9,8 @@ include_HEADERS = \
 		message.h\
 		cassandra_stmt_ptr.h\
 		monthly_records.h\
-		dbconnection_records.h
+		dbconnection_records.h\
+		dbconnection_jobs.h
 
 libcassobs2_la_SOURCES = \
 		    dbconnection_common.cpp\
@@ -24,6 +25,8 @@ libcassobs2_la_SOURCES = \
 		    dbconnection_records.h\
 		    dbconnection_normals.cpp\
 		    dbconnection_normals.h\
+		    dbconnection_jobs.cpp\
+		    dbconnection_jobs.h\
 		    monthly_records.cpp\
 		    monthly_records.h\
 		    cassandra_stmt_ptr.h\
@@ -36,7 +39,7 @@ libcassobs2_la_CXXFLAGS =
 libcassobs2_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(DATE_LIBS) $(MYSQL_LIBS)
 libcassobs2_la_LDFLAGS = -version-info 6:2:0
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations compute_minmax
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations compute_minmax get_jobs
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = \
@@ -104,3 +107,9 @@ compute_minmax_SOURCES = \
 compute_minmax_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
 compute_minmax_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
 compute_minmax_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)
+
+get_jobs_SOURCES = \
+	    tests/get_jobs.cpp
+get_jobs_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
+get_jobs_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
+get_jobs_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)

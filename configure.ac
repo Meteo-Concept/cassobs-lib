@@ -44,12 +44,7 @@ AC_TYPE_SIZE_T
 
 # Checks for library functions.
 AX_PTHREAD
-PKG_CHECK_MODULES([MYSQL], [mariadb],
-   [AC_DEFINE([HAVE_MYSQL], [1], [Use MariaDB MySQL emulation])],
-   [PKG_CHECK_MODULES([MYSQL], [mysqlclient],
-       [AC_DEFINE([HAVE_MYSQL], [1], [Use MySQL client])
-    ])
-])
+PKG_CHECK_MODULES(MYSQL, [mariadb mysqlclient])
 
 PKG_CHECK_MODULES(DATE, [date])
 PKG_CHECK_MODULES(CASSANDRA, [cassandra])

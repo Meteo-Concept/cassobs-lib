@@ -18,7 +18,7 @@ struct Filter {
     static constexpr int MIN_HUMIDITY = 0;
     static constexpr int MAX_HUMIDITY = 100;
     static constexpr float MIN_WIND_SPEED = 0;
-    static constexpr float MAX_WIND_SPEED = 80;
+    static constexpr float MAX_WIND_SPEED = 160;
     static constexpr float MIN_WINDGUST_SPEED = 0;
     static constexpr float MAX_WINDGUST_SPEED = 250;
     static constexpr int MIN_WINDDIR = 0;

@@ -94,7 +94,8 @@ namespace meteodata {
 			"soilmoistures50cm, soilmoistures60cm, "
 			"soiltemp10cm, soiltemp20cm, "
 			"soiltemp30cm, soiltemp40cm, "
-			"soiltemp50cm, soiltemp60cm "
+			"soiltemp50cm, soiltemp60cm, "
+			"leaf_wetness_percent1 "
 			" FROM meteodata_v2.meteo WHERE station = ? "
 			" AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1"
 		);
@@ -130,7 +131,8 @@ namespace meteodata {
 			"soilmoistures50cm, soilmoistures60cm, "
 			"soiltemp10cm, soiltemp20cm, "
 			"soiltemp30cm, soiltemp40cm, "
-			"soiltemp50cm, soiltemp60cm "
+			"soiltemp50cm, soiltemp60cm, "
+			"leaf_wetness_percent1 "
 			") "
 			" VALUES ("
 			"?,"		// "station,"
@@ -160,7 +162,8 @@ namespace meteodata {
 			"?,?,?,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
 			"?,?,?,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
-			"?,?,? "	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"? "		// "leaf_wetness_percent1"
 			")"
 		);
 
@@ -195,7 +198,8 @@ namespace meteodata {
 			"soilmoistures50cm, soilmoistures60cm, "
 			"soiltemp10cm, soiltemp20cm, "
 			"soiltemp30cm, soiltemp40cm, "
-			"soiltemp50cm, soiltemp60cm "
+			"soiltemp50cm, soiltemp60cm,"
+			"leaf_wetness_percent1 "
 			") "
 			" VALUES ("
 			"?,"		// "station,"
@@ -225,7 +229,8 @@ namespace meteodata {
 			"?,?,?,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
 			"?,?,?,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
-			"?,?,? "	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"? "		// "leaf_wetness_percent1"
 			")"
 		);
 
@@ -421,7 +426,8 @@ namespace meteodata {
 						"soilmoistures10cm", "soilmoistures20cm", "soilmoistures30cm",
 						"soilmoistures40cm", "soilmoistures50cm", "soilmoistures60cm",
 						"soiltemp10cm", "soiltemp20cm", "soiltemp30cm",
-						"soiltemp40cm", "soiltemp50cm", "soiltemp60cm"
+						"soiltemp40cm", "soiltemp50cm", "soiltemp60cm",
+						"leaf_wetness_percent1"
 					}) {
 					value = cass_row_get_column_by_name(row, var);
 					if (!cass_value_is_null(value)) {
@@ -669,6 +675,9 @@ namespace meteodata {
 			cass_statement_bind_float(statement, 51, obs.soiltemp50cm.second);
 		if (obs.soiltemp60cm.first)
 			cass_statement_bind_float(statement, 52, obs.soiltemp60cm.second);
+		/*************************************************************/
+		if (obs.leafwetness_percent1.first)
+			cass_statement_bind_float(statement, 53, obs.leafwetness_percent1.second);
 		/*************************************************************/
 	}
 

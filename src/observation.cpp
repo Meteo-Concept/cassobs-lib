@@ -159,6 +159,9 @@ void Observation::set(const std::string& column, float value)
 	} else if (column == "soiltemp60cm" || column == "soil_temp_60cm" || column == "soil_temperature_60cm") {
 		soiltemp60cm.first = true;
 		soiltemp60cm.second = value;
+	} else if (column == "leafwetnesspercent1" || column == "leaf_wetness_percent1") {
+		leafwetness_percent1.first = true;
+		leafwetness_percent1.second = value;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not a float");
 	}
@@ -299,6 +302,8 @@ float Observation::get<float>(const std::string& column) const
 		return soiltemp50cm.second;
 	} else if (column == "soiltemp60cm" || column == "soil_temp_60cm" || column == "soil_temperature_60cm") {
 		return soiltemp60cm.second;
+	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
+		return leafwetness_percent1.second;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not a float");
 	}
@@ -447,6 +452,8 @@ bool Observation::isPresent(const std::string& column) const
 		return soiltemp50cm.first;
 	} else if (column == "soiltemp60cm" || column == "soil_temp_60cm" || column == "soil_temperature_60cm") {
 		return soiltemp60cm.first;
+	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
+		return leafwetness_percent1.first;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist");
 	}
@@ -592,23 +599,23 @@ void Observation::filterOutImpossibleValues()
 	// no treatment for leafwetness_timeratio
 	/*************************************************************/
 	soilmoistures10cm.first = soilmoistures10cm.first
-		&& soilmoistures10cm.second >= Filter::MIN_PERCENTAGE_SOIL_MOISTURE
-		&& soilmoistures10cm.second <= Filter::MAX_PERCENTAGE_SOIL_MOISTURE;
+		&& soilmoistures10cm.second >= Filter::MIN_PERCENTAGE
+		&& soilmoistures10cm.second <= Filter::MAX_PERCENTAGE;
 	soilmoistures20cm.first = soilmoistures20cm.first
-		&& soilmoistures20cm.second >= Filter::MIN_PERCENTAGE_SOIL_MOISTURE
-		&& soilmoistures20cm.second <= Filter::MAX_PERCENTAGE_SOIL_MOISTURE;
+		&& soilmoistures20cm.second >= Filter::MIN_PERCENTAGE
+		&& soilmoistures20cm.second <= Filter::MAX_PERCENTAGE;
 	soilmoistures30cm.first = soilmoistures30cm.first
-		&& soilmoistures30cm.second >= Filter::MIN_PERCENTAGE_SOIL_MOISTURE
-		&& soilmoistures30cm.second <= Filter::MAX_PERCENTAGE_SOIL_MOISTURE;
+		&& soilmoistures30cm.second >= Filter::MIN_PERCENTAGE
+		&& soilmoistures30cm.second <= Filter::MAX_PERCENTAGE;
 	soilmoistures40cm.first = soilmoistures40cm.first
-		&& soilmoistures40cm.second >= Filter::MIN_PERCENTAGE_SOIL_MOISTURE
-		&& soilmoistures40cm.second <= Filter::MAX_PERCENTAGE_SOIL_MOISTURE;
+		&& soilmoistures40cm.second >= Filter::MIN_PERCENTAGE
+		&& soilmoistures40cm.second <= Filter::MAX_PERCENTAGE;
 	soilmoistures50cm.first = soilmoistures50cm.first
-		&& soilmoistures50cm.second >= Filter::MIN_PERCENTAGE_SOIL_MOISTURE
-		&& soilmoistures50cm.second <= Filter::MAX_PERCENTAGE_SOIL_MOISTURE;
+		&& soilmoistures50cm.second >= Filter::MIN_PERCENTAGE
+		&& soilmoistures50cm.second <= Filter::MAX_PERCENTAGE;
 	soilmoistures60cm.first = soilmoistures60cm.first
-		&& soilmoistures60cm.second >= Filter::MIN_PERCENTAGE_SOIL_MOISTURE
-		&& soilmoistures60cm.second <= Filter::MAX_PERCENTAGE_SOIL_MOISTURE;
+		&& soilmoistures60cm.second >= Filter::MIN_PERCENTAGE
+		&& soilmoistures60cm.second <= Filter::MAX_PERCENTAGE;
 	/*************************************************************/
 	soiltemp10cm.first = soiltemp10cm.first
 		&& soiltemp10cm.second >= Filter::MIN_SOIL_TEMPERATURE
@@ -628,6 +635,10 @@ void Observation::filterOutImpossibleValues()
 	soiltemp60cm.first = soiltemp60cm.first
 		&& soiltemp60cm.second >= Filter::MIN_SOIL_TEMPERATURE
 		&& soiltemp60cm.second <= Filter::MAX_SOIL_TEMPERATURE;
+	/*************************************************************/
+	leafwetness_percent1.first = leafwetness_percent1.first
+		&& leafwetness_percent1.second >= Filter::MIN_PERCENTAGE
+		&& leafwetness_percent1.second <= Filter::MAX_PERCENTAGE;
 	/*************************************************************/
 }
 

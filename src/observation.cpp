@@ -159,7 +159,7 @@ void Observation::set(const std::string& column, float value)
 	} else if (column == "soiltemp60cm" || column == "soil_temp_60cm" || column == "soil_temperature_60cm") {
 		soiltemp60cm.first = true;
 		soiltemp60cm.second = value;
-	} else if (column == "leafwetnesspercent1" || column == "leaf_wetness_percent1") {
+	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
 		leafwetness_percent1.first = true;
 		leafwetness_percent1.second = value;
 	} else {

@@ -33,8 +33,6 @@
 
 namespace meteodata {
 
-namespace chrono = std::chrono;
-
 class Observation
 {
 public:
@@ -83,7 +81,7 @@ public:
 	std::pair<bool,float> leafwetness_percent1     = {false,0};
 
 	template<typename ColumnType>
-	ColumnType get(const std::string& column) const
+	ColumnType get(const std::string&) const
 	{
 		throw std::runtime_error("Unsupported type requested");
 	}
@@ -119,7 +117,7 @@ private:
 		"leafwetness_timeratio1"
 	};
 
-	static constexpr std::array<char const *, 77> VALID_VAR_FLOATS = {
+	static constexpr std::array<char const *, 78> VALID_VAR_FLOATS = {
 		"barometer", "pressure",
 		"dewpoint", "dew_point",
 		"extratemp1", "extra_temperature1",

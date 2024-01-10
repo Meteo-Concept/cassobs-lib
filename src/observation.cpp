@@ -114,6 +114,9 @@ void Observation::set(const std::string& column, float value)
 	} else if (column == "windgust" || column == "windgust_speed") {
 		windgust.first = true;
 		windgust.second = value;
+	} else if (column == "min_windspeed" || column == "min_wind_speed") {
+		min_windspeed.first = true;
+		min_windspeed.second = value;
 	} else if (column == "windspeed" || column == "wind_speed") {
 		windspeed.first = true;
 		windspeed.second = value;
@@ -272,6 +275,8 @@ float Observation::get<float>(const std::string& column) const
 		return windchill.second;
 	} else if (column == "windgust" || column == "windgust_speed") {
 		return windgust.second;
+	} else if (column == "min_windspeed" || column == "min_wind_speed") {
+		return min_windspeed.second;
 	} else if (column == "windspeed" || column == "wind_speed") {
 		return windspeed.second;
 	} else if (column == "min_outside_temperature") {
@@ -398,6 +403,8 @@ bool Observation::isPresent(const std::string& column) const
 		return windchill.first;
 	} else if (column == "windgust" || column == "windgust_speed") {
 		return windgust.first;
+	} else if (column == "min_windspeed" || column == "min_wind_speed") {
+		return min_windspeed.first;
 	} else if (column == "windspeed" || column == "wind_speed") {
 		return windspeed.first;
 	} else if (column == "extrahum1" || column == "extra_humidity1") {
@@ -581,6 +588,10 @@ void Observation::filterOutImpossibleValues()
 	windgust.first = windgust.first
 		&& windgust.second >= Filter::MIN_WINDGUST_SPEED
 		&& windgust.second <= Filter::MAX_WINDGUST_SPEED;
+	/*************************************************************/
+	min_windspeed.first = min_windspeed.first
+		&& min_windspeed.second >= Filter::MIN_WIND_SPEED
+		&& min_windspeed.second <= Filter::MAX_WIND_SPEED;
 	/*************************************************************/
 	windspeed.first = windspeed.first
 		&& windspeed.second >= Filter::MIN_WIND_SPEED

@@ -61,6 +61,7 @@ public:
 	std::pair<bool,float> windchill                = {false,0};
 	std::pair<bool,int  > winddir                  = {false,0};
 	std::pair<bool,float> windgust                 = {false,0};
+	std::pair<bool,float> min_windspeed            = {false,0};
 	std::pair<bool,float> windspeed                = {false,0};
 	std::pair<bool,int  > insolation_time          = {false,0};
 	std::pair<bool,float> min_outside_temperature  = {false,0};
@@ -117,7 +118,7 @@ private:
 		"leafwetness_timeratio1"
 	};
 
-	static constexpr std::array<char const *, 78> VALID_VAR_FLOATS = {
+	static constexpr std::array<char const *, 80> VALID_VAR_FLOATS = {
 		"barometer", "pressure",
 		"dewpoint", "dew_point",
 		"extratemp1", "extra_temperature1",
@@ -138,7 +139,7 @@ private:
 		"thswindex", "thsw_index",
 		"windchill",
 		"windgust", "windgust_speed",
-		"windspeed", "wind_speed",
+		"min_windspeed", "min_wind_speed", "windspeed", "wind_speed",
 		"min_outside_temperature",
 		"max_outside_temperature",
 		"soilmoistures10cm", "soil_moisture_10cm",

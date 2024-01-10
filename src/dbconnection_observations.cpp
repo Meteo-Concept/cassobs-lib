@@ -563,128 +563,170 @@ namespace meteodata {
 		cass_statement_bind_int64(statement, c++, 1000*obs.time.time_since_epoch().count()); // in ms
 		/*************************************************************/
 		if (obs.barometer.first)
-			cass_statement_bind_float(statement, c++, obs.barometer.second);
+			cass_statement_bind_float(statement, c, obs.barometer.second);
+		c++;
 		/*************************************************************/
 		if (obs.dewpoint.first)
-			cass_statement_bind_float(statement, c++, obs.dewpoint.second);
+			cass_statement_bind_float(statement, c, obs.dewpoint.second);
+		c++;
 		/*************************************************************/
 		for (int i=0 ; i<2 ; i++) {
 			if (obs.extrahum[i].first)
-				cass_statement_bind_int32(statement, c++, obs.extrahum[i].second);
+				cass_statement_bind_int32(statement, c, obs.extrahum[i].second);
+			c++;
 		}
 		/*************************************************************/
 		for (int i=0 ; i<3 ; i++) {
 			if (obs.extratemp[i].first)
-				cass_statement_bind_float(statement, c++, obs.extratemp[i].second);
+				cass_statement_bind_float(statement, c, obs.extratemp[i].second);
+			c++;
 		}
 		/*************************************************************/
 		if (obs.heatindex.first)
-			cass_statement_bind_float(statement, c++, obs.heatindex.second);
+			cass_statement_bind_float(statement, c, obs.heatindex.second);
+		c++;
 		/*************************************************************/
 		if (obs.insidehum.first)
-			cass_statement_bind_int32(statement, c++, obs.insidehum.second);
+			cass_statement_bind_int32(statement, c, obs.insidehum.second);
+		c++;
 		/*************************************************************/
 		if (obs.insidetemp.first)
-			cass_statement_bind_float(statement, c++, obs.insidetemp.second);
+			cass_statement_bind_float(statement, c, obs.insidetemp.second);
+		c++;
 		/*************************************************************/
 		for (int i=0 ; i<2 ; i++) {
 			if (obs.leaftemp[i].first)
-				cass_statement_bind_float(statement, c++, obs.leaftemp[i].second);
+				cass_statement_bind_float(statement, c, obs.leaftemp[i].second);
+			c++;
 		}
+		/*************************************************************/
 		for (int i=0 ; i<2 ; i++) {
 			if (obs.leafwetnesses[i].first)
-				cass_statement_bind_int32(statement, c++, obs.leafwetnesses[i].second);
+				cass_statement_bind_int32(statement, c, obs.leafwetnesses[i].second);
+			c++;
 		}
 		/*************************************************************/
 		if (obs.outsidehum.first)
-			cass_statement_bind_int32(statement, c++, obs.outsidehum.second);
+			cass_statement_bind_int32(statement, c, obs.outsidehum.second);
+		c++;
 		/*************************************************************/
 		if (obs.outsidetemp.first)
-			cass_statement_bind_float(statement, c++, obs.outsidetemp.second);
+			cass_statement_bind_float(statement, c, obs.outsidetemp.second);
+		c++;
 		/*************************************************************/
 		if (obs.rainrate.first)
-			cass_statement_bind_float(statement, c++, obs.rainrate.second);
+			cass_statement_bind_float(statement, c, obs.rainrate.second);
+		c++;
 		/*************************************************************/
 		if (obs.rainfall.first)
-			cass_statement_bind_float(statement, c++, obs.rainfall.second);
+			cass_statement_bind_float(statement, c, obs.rainfall.second);
+		c++;
 		/*************************************************************/
 		if (obs.et.first)
-			cass_statement_bind_float(statement, c++, obs.et.second);
+			cass_statement_bind_float(statement, c, obs.et.second);
+		c++;
 		/*************************************************************/
 		for (int i=0 ; i<4 ; i++) {
 			if (obs.soilmoistures[i].first)
-				cass_statement_bind_int32(statement, c++, obs.soilmoistures[i].second);
+				cass_statement_bind_int32(statement, c, obs.soilmoistures[i].second);
+			c++;
 		}
 		/*************************************************************/
 		for (int i=0 ; i<4 ; i++) {
 			if (obs.soiltemp[i].first)
-				cass_statement_bind_float(statement, c++, obs.soiltemp[i].second);
+				cass_statement_bind_float(statement, c, obs.soiltemp[i].second);
+			c++;
 		}
 		/*************************************************************/
 		if (obs.solarrad.first)
-			cass_statement_bind_int32(statement, c++, obs.solarrad.second);
+			cass_statement_bind_int32(statement, c, obs.solarrad.second);
+		c++;
 		/*************************************************************/
 		if (obs.thswindex.first)
-			cass_statement_bind_float(statement, c++, obs.thswindex.second);
+			cass_statement_bind_float(statement, c, obs.thswindex.second);
+		c++;
 		/*************************************************************/
 		if (obs.uv.first)
-			cass_statement_bind_int32(statement, c++, obs.uv.second);
+			cass_statement_bind_int32(statement, c, obs.uv.second);
+		c++;
 		/*************************************************************/
 		if (obs.windchill.first)
-			cass_statement_bind_float(statement, c++, obs.windchill.second);
+			cass_statement_bind_float(statement, c, obs.windchill.second);
+		c++;
 		/*************************************************************/
 		if (obs.winddir.first)
-			cass_statement_bind_int32(statement, c++, obs.winddir.second);
+			cass_statement_bind_int32(statement, c, obs.winddir.second);
+		c++;
 		/*************************************************************/
 		if (obs.windgust.first)
-			cass_statement_bind_float(statement, c++, obs.windgust.second);
+			cass_statement_bind_float(statement, c, obs.windgust.second);
+		c++;
 		/*************************************************************/
 		if (obs.min_windspeed.first)
-			cass_statement_bind_float(statement, c++, obs.windspeed.second);
+			cass_statement_bind_float(statement, c, obs.min_windspeed.second);
+		c++;
 		/*************************************************************/
 		if (obs.windspeed.first)
-			cass_statement_bind_float(statement, c++, obs.windspeed.second);
+			cass_statement_bind_float(statement, c, obs.windspeed.second);
+		c++;
 		/*************************************************************/
 		if (obs.insolation_time.first)
-			cass_statement_bind_int32(statement, c++, obs.insolation_time.second);
+			cass_statement_bind_int32(statement, c, obs.insolation_time.second);
+		c++;
 		/*************************************************************/
 		if (obs.min_outside_temperature.first)
-			cass_statement_bind_float(statement, c++, obs.min_outside_temperature.second);
+			cass_statement_bind_float(statement, c, obs.min_outside_temperature.second);
+		c++;
 		/*************************************************************/
 		if (obs.max_outside_temperature.first)
-			cass_statement_bind_float(statement, c++, obs.max_outside_temperature.second);
+			cass_statement_bind_float(statement, c, obs.max_outside_temperature.second);
+		c++;
 		/*************************************************************/
 		if (obs.leafwetness_timeratio1.first)
-			cass_statement_bind_int32(statement, c++, obs.leafwetness_timeratio1.second);
+			cass_statement_bind_int32(statement, c, obs.leafwetness_timeratio1.second);
+		c++;
 		/*************************************************************/
 		if (obs.soilmoistures10cm.first)
-			cass_statement_bind_float(statement, c++, obs.soilmoistures10cm.second);
+			cass_statement_bind_float(statement, c, obs.soilmoistures10cm.second);
+		c++;
 		if (obs.soilmoistures20cm.first)
-			cass_statement_bind_float(statement, c++, obs.soilmoistures20cm.second);
+			cass_statement_bind_float(statement, c, obs.soilmoistures20cm.second);
+		c++;
 		if (obs.soilmoistures30cm.first)
-			cass_statement_bind_float(statement, c++, obs.soilmoistures30cm.second);
+			cass_statement_bind_float(statement, c, obs.soilmoistures30cm.second);
+		c++;
 		if (obs.soilmoistures40cm.first)
-			cass_statement_bind_float(statement, c++, obs.soilmoistures40cm.second);
+			cass_statement_bind_float(statement, c, obs.soilmoistures40cm.second);
+		c++;
 		if (obs.soilmoistures50cm.first)
-			cass_statement_bind_float(statement, c++, obs.soilmoistures50cm.second);
+			cass_statement_bind_float(statement, c, obs.soilmoistures50cm.second);
+		c++;
 		if (obs.soilmoistures60cm.first)
-			cass_statement_bind_float(statement, c++, obs.soilmoistures60cm.second);
+			cass_statement_bind_float(statement, c, obs.soilmoistures60cm.second);
+		c++;
 		/*************************************************************/
 		if (obs.soiltemp10cm.first)
-			cass_statement_bind_float(statement, c++, obs.soiltemp10cm.second);
+			cass_statement_bind_float(statement, c, obs.soiltemp10cm.second);
+		c++;
 		if (obs.soiltemp20cm.first)
-			cass_statement_bind_float(statement, c++, obs.soiltemp20cm.second);
+			cass_statement_bind_float(statement, c, obs.soiltemp20cm.second);
+		c++;
 		if (obs.soiltemp30cm.first)
-			cass_statement_bind_float(statement, c++, obs.soiltemp30cm.second);
+			cass_statement_bind_float(statement, c, obs.soiltemp30cm.second);
+		c++;
 		if (obs.soiltemp40cm.first)
-			cass_statement_bind_float(statement, c++, obs.soiltemp40cm.second);
+			cass_statement_bind_float(statement, c, obs.soiltemp40cm.second);
+		c++;
 		if (obs.soiltemp50cm.first)
-			cass_statement_bind_float(statement, c++, obs.soiltemp50cm.second);
+			cass_statement_bind_float(statement, c, obs.soiltemp50cm.second);
+		c++;
 		if (obs.soiltemp60cm.first)
-			cass_statement_bind_float(statement, c++, obs.soiltemp60cm.second);
+			cass_statement_bind_float(statement, c, obs.soiltemp60cm.second);
+		c++;
 		/*************************************************************/
 		if (obs.leafwetness_percent1.first)
-			cass_statement_bind_float(statement, c++, obs.leafwetness_percent1.second);
+			cass_statement_bind_float(statement, c, obs.leafwetness_percent1.second);
+		c++;
 		/*************************************************************/
 	}
 

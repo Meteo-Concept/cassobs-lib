@@ -58,7 +58,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectAllIcaos,
-			"SELECT id,icao FROM meteodata.stationsFR"
+			"SELECT id,icao,active FROM meteodata.stationsFR"
 		);
 
 		prepareOneStatement(_selectDeferredSynops,
@@ -1286,7 +1286,14 @@ namespace meteodata {
 				const char *icaoStr;
 				size_t icaoLength;
 				cass_value_get_string(v, &icaoStr, &icaoLength);
-				if (icaoLength != 0)
+
+				v = cass_row_get_column(row, 2);
+				if (cass_value_is_null(v))
+					return;
+				cass_bool_t active;
+				cass_value_get_bool(v, &active);
+
+				if (icaoLength != 0 && active)
 					stations.emplace_back(station, std::string{icaoStr, icaoLength});
 			}
 		);

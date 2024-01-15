@@ -271,7 +271,7 @@ class DbConnectionCommon
 		/**
 		 * @brief The raw query string to select all MeteoFrance stations in the SYNOP network from the database
 		 */
-		static constexpr char SELECT_ALL_STATIONS_FR_STMT[] = "SELECT id FROM meteodata.stationsFR WHERE type=0";
+		static constexpr char SELECT_ALL_STATIONS_FR_STMT[] = "SELECT id FROM meteodata.stationsfr WHERE type=0";
 		/**
 		 * @brief The first prepared statement for the getAllStations() method
 		 */

@@ -58,7 +58,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectAllIcaos,
-			"SELECT id,icao,active FROM meteodata.stationsFR"
+			"SELECT id,icao,active FROM meteodata.stationsfr"
 		);
 
 		prepareOneStatement(_selectDeferredSynops,
@@ -354,6 +354,10 @@ namespace meteodata {
 
 		prepareOneStatement(_selectMBDataTxtStations,
 			"SELECT station, active, host, url, https, tz, type FROM meteodata.mbdatatxt"
+		);
+
+		prepareOneStatement(_selectMeteoFranceStations,
+			"SELECT id, active, icao, idstation, date_creation, latitude, longitude, elevation, type FROM meteodata.stationsfr"
 		);
 
 		prepareOneStatement(_getRainfall,
@@ -1293,7 +1297,7 @@ namespace meteodata {
 				cass_bool_t active;
 				cass_value_get_bool(v, &active);
 
-				if (icaoLength != 0 && active)
+				if (icaoLength != 0 && active == cass_true)
 					stations.emplace_back(station, std::string{icaoStr, icaoLength});
 			}
 		);
@@ -1492,6 +1496,79 @@ namespace meteodata {
 
 					if (active == cass_true)
 						stations.emplace_back(station, std::string{cimelId, sizeCimelId}, timezone);
+				}
+		);
+	}
+
+	bool DbConnectionObservations::getMeteoFranceStations(std::vector<std::tuple<CassUuid, std::string, std::string, int, float, float, int, int>>& stations)
+	{
+		return performSelect(_selectMeteoFranceStations.get(),
+				[&stations](const CassRow* row) {
+					const CassValue* v = cass_row_get_column(row, 0);
+					if (cass_value_is_null(v))
+						return;
+					CassUuid station;
+					cass_value_get_uuid(v, &station);
+
+					v = cass_row_get_column(row, 1);
+					if (cass_value_is_null(v))
+						return;
+					cass_bool_t active;
+					cass_value_get_bool(v, &active);
+
+					v = cass_row_get_column(row, 2);
+					std::string icao;
+					if (!cass_value_is_null(v)) {
+						const char *icaoC;
+						size_t sizeIcao;
+						cass_value_get_string(v, &icaoC, &sizeIcao);
+						icao = std::string{icaoC, sizeIcao};
+					}
+
+					v = cass_row_get_column(row, 3);
+					if (cass_value_is_null(v))
+						return;
+					const char *mfId;
+					size_t sizeMfId;
+					cass_value_get_string(v, &mfId, &sizeMfId);
+
+					int date;
+					v = cass_row_get_column(row, 4);
+					if (cass_value_is_null(v))
+						date = 0;
+					else
+						cass_value_get_int32(cass_row_get_column(row,4), &date);
+
+					float latitude;
+					v = cass_row_get_column(row, 5);
+					if (cass_value_is_null(v))
+						latitude = 0;
+					else
+						cass_value_get_float(cass_row_get_column(row,5), &latitude);
+
+					float longitude;
+					v = cass_row_get_column(row, 6);
+					if (cass_value_is_null(v))
+						longitude = 0;
+					else
+						cass_value_get_float(cass_row_get_column(row,6), &longitude);
+
+					int elevation;
+					v = cass_row_get_column(row, 7);
+					if (cass_value_is_null(v))
+						elevation = 0;
+					else
+						cass_value_get_int32(cass_row_get_column(row,7), &elevation);
+
+					int type;
+					v = cass_row_get_column(row, 8);
+					if (cass_value_is_null(v))
+						type = 0;
+					else
+						cass_value_get_int32(cass_row_get_column(row,8), &type);
+
+					if (active == cass_true)
+						stations.emplace_back(station, icao, std::string{mfId, sizeMfId}, date, latitude, longitude, elevation, type);
 				}
 		);
 	}

@@ -427,6 +427,16 @@ namespace meteodata {
 			bool getAllCimelStations(std::vector<std::tuple<CassUuid, std::string, int>>& stations);
 
 			/**
+			 * @brief Get information relative to stations belonging
+			 * to the Meteo France networks
+			 *
+			 * TODO
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getMeteoFranceStations(std::vector<std::tuple<CassUuid, std::string, std::string, int, float, float, int, int>>& stations);
+
+			/**
 			 * @brief Get the total rainfall between two datetimes for a station
 			 *
 			 * @param[in] station The station UUID
@@ -606,6 +616,11 @@ namespace meteodata {
 			 * getCimelStations() method
 			 */
 			CassandraStmtPtr _selectCimelStations;
+			/**
+			 * @brief The prepared statement for the
+			 * getMeteoFranceStations() method
+			 */
+			CassandraStmtPtr _selectMeteoFranceStations;
 			/**
 			 * @brief The prepared statement for the getRainfall() method
 			 */

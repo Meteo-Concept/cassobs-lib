@@ -37,9 +37,9 @@ libcassobs2_la_SOURCES = \
 libcassobs2_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CFLAGS) $(DATE_CFLAGS) $(MYSQL_CFLAGS)
 libcassobs2_la_CXXFLAGS =
 libcassobs2_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(DATE_LIBS) $(MYSQL_LIBS)
-libcassobs2_la_LDFLAGS = -version-info 9:1:0
+libcassobs2_la_LDFLAGS = -version-info 10:0:1
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations compute_minmax get_jobs
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations get_meteofrance_stations compute_minmax get_jobs
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = \
@@ -101,6 +101,12 @@ get_cimel_stations_SOURCES = \
 get_cimel_stations_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
 get_cimel_stations_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
 get_cimel_stations_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)
+
+get_meteofrance_stations_SOURCES = \
+			tests/get_meteofrance_stations.cpp
+get_meteofrance_stations_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
+get_meteofrance_stations_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
+get_meteofrance_stations_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)
 
 compute_minmax_SOURCES = \
 			tests/compute_minmax.cpp

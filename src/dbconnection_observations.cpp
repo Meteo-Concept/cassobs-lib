@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <chrono>
 #include <iostream>
 #include <exception>
 #include <vector>
@@ -36,6 +37,7 @@
 
 #include "dbconnection_observations.h"
 #include "observation.h"
+#include "map_observation.h"
 #include "cassandra_stmt_ptr.h"
 
 namespace meteodata {
@@ -98,6 +100,18 @@ namespace meteodata {
 			"leaf_wetness_percent1 "
 			" FROM meteodata_v2.meteo WHERE station = ? "
 			" AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1"
+		);
+
+		prepareOneStatement(_selectMapValues,
+			"SELECT "
+			"time,"
+			"outsidetemp, max_outside_temperature, min_outside_temperature, "
+			"rainfall,"
+			"et,"
+			"windgust,"
+			"insolation_time "
+			" FROM meteodata_v2.meteo WHERE station = ? "
+			" AND day = ? ORDER BY time DESC"
 		);
 
 		prepareOneStatement(_insertV2RawDataPoint,
@@ -231,6 +245,88 @@ namespace meteodata {
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
 			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
 			"? "		// "leaf_wetness_percent1"
+			")"
+		);
+
+		prepareOneStatement(_insertV2MapDataPoint,
+			"INSERT INTO meteodata_v2.observations_map ("
+			"time,"
+			"station,"
+			"barometer,"
+			"dewpoint,"
+			"extrahum1, extrahum2,"
+			"extratemp1,extratemp2, extratemp3,"
+			"heatindex,"
+			"insidehum,insidetemp,"
+			"leaftemp1, leaftemp2,"
+			"leafwetnesses1, leafwetnesses2,"
+			"outsidehum,outsidetemp,"
+			"rainrate, rainfall,"
+			"et,"
+			"soilmoistures1, soilmoistures2, soilmoistures3,"
+			"soilmoistures4,"
+			"soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"solarrad,"
+			"thswindex,"
+			"uv,"
+			"windchill,"
+			"winddir, windgust, min_windspeed, windspeed,"
+			"insolation_time,"
+			"min_outside_temperature, max_outside_temperature,"
+			"leafwetnesses_timeratio1, "
+			"soilmoistures10cm, soilmoistures20cm, "
+			"soilmoistures30cm, soilmoistures40cm, "
+			"soilmoistures50cm, soilmoistures60cm, "
+			"soiltemp10cm, soiltemp20cm, "
+			"soiltemp30cm, soiltemp40cm, "
+			"soiltemp50cm, soiltemp60cm,"
+			"leaf_wetness_percent1, "
+			"rainfall1h, rainfall3h, rainfall6h, "
+			"rainfall12h, rainfall24h, rainfall48h, "
+			"max_outside_temperature1h, max_outside_temperature6h, "
+			"max_outside_temperature12h, max_outside_temperature24h, "
+			"min_outside_temperature1h, min_outside_temperature6h, "
+			"min_outside_temperature12h, min_outside_temperature24h, "
+			"et1h, et12h, et24h, et48h, "
+			"windgust1h, windgust12h, windgust24h "
+			") "
+			" VALUES ("
+			"?, ?,"		// "time, station,"
+			"?,"		// "barometer,"
+			"?,"		// "dewpoint,"
+			"?, ?,"		// "extrahum1, extrahum2,"
+			"?,?, ?,"	// "extratemp1,extratemp2, extratemp3,"
+			"?,"		// "heatindex,"
+			"?,?,"		// "insidehum,insidetemp,"
+			"?, ?,"		// "leaftemp1, leaftemp2,"
+			"?, ?,"		// "leafwetnesses1, leafwetnesses2,"
+			"?,?,"		// "outsidehum,outsidetemp,"
+			"?, ?,"		// "rainrate, rainfall,"
+			"?,"		// "et,"
+			"?, ?, ?,"	// "soilmoistures1, soilmoistures2, soilmoistures3,"
+			"?,"		// "soilmoistures4,"
+			"?, ?, ?, ?,"	// "soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"?,"		// "solarrad,"
+			"?,"		// "thswindex,"
+			"?,"		// "uv,"
+			"?,"		// "windchill,"
+			"?, ?, ?, ?,"	// "winddir, windgust, min_windspeed, windspeed,"
+			"?,"		// "insolation_time"
+			"?,?,"		// "min_outside_temperature, max_outside_temperature"
+			"?,"		// "leafwetnesses_timeratio1"
+			"?,?,?,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
+			"?,?,?,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
+			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
+			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"?,"		// "leaf_wetness_percent1"
+			"?,?,?, "	// 54 "rainfall1h, rainfall3h, rainfall6h, "
+			"?,?,?, "	// "rainfall12h, rainfall24h, rainfall48h, "
+			"?,?,"		// "max_outside_temperature1h, max_outside_temperature6h, "
+			"?,?,"		// "max_outside_temperature12h, max_outside_temperature24h, "
+			"?,?,"		// "min_outside_temperature1h, min_outside_temperature6h, "
+			"?,?,"		// "min_outside_temperature12h, min_outside_temperature24h, "
+			"?,?,?,?, "	// "et1h, et12h, et24h, et48h, "
+			"?,?,? "	// "windgust1h, windgust12h, windgust24h "
 			")"
 		);
 
@@ -556,15 +652,8 @@ namespace meteodata {
 		return ret;
 	}
 
-	void DbConnectionObservations::populateV2InsertionQuery(CassStatement* statement, const Observation& obs)
+	void DbConnectionObservations::populateV2CommonInsertionQuery(CassStatement* statement, const Observation& obs, int& c)
 	{
-		int c = 0;
-
-		/*************************************************************/
-		cass_statement_bind_uuid(statement, c++, obs.station);
-		/*************************************************************/
-		cass_statement_bind_uint32(statement, c++, cass_date_from_epoch(obs.time.time_since_epoch().count()));
-		cass_statement_bind_int64(statement, c++, 1000*obs.time.time_since_epoch().count()); // in ms
 		/*************************************************************/
 		if (obs.barometer.first)
 			cass_statement_bind_float(statement, c, obs.barometer.second);
@@ -734,6 +823,101 @@ namespace meteodata {
 		/*************************************************************/
 	}
 
+	void DbConnectionObservations::populateV2InsertionQuery(CassStatement* statement, const Observation& obs)
+	{
+		int c = 0;
+
+		/*************************************************************/
+		cass_statement_bind_uuid(statement, c++, obs.station);
+		/*************************************************************/
+		cass_statement_bind_uint32(statement, c++, cass_date_from_epoch(obs.time.time_since_epoch().count()));
+		cass_statement_bind_int64(statement, c++, 1000*obs.time.time_since_epoch().count()); // in ms
+		/*************************************************************/
+
+		populateV2CommonInsertionQuery(statement, obs, c);
+	}
+
+	void DbConnectionObservations::populateV2MapInsertionQuery(CassStatement* statement, const Observation& obs, const MapObservation& map)
+	{
+		int c = 0;
+
+		/*************************************************************/
+		cass_statement_bind_int64(statement, c++, 1000*obs.time.time_since_epoch().count()); // in ms
+		cass_statement_bind_uuid(statement, c++, obs.station);
+		/*************************************************************/
+
+		populateV2CommonInsertionQuery(statement, obs, c);
+
+		/*************************************************************/
+		if (map.rainfall1h.first)
+			cass_statement_bind_float(statement, c, map.rainfall1h.second);
+		c++;
+		if (map.rainfall3h.first)
+			cass_statement_bind_float(statement, c, map.rainfall3h.second);
+		c++;
+		if (map.rainfall6h.first)
+			cass_statement_bind_float(statement, c, map.rainfall6h.second);
+		c++;
+		if (map.rainfall12h.first)
+			cass_statement_bind_float(statement, c, map.rainfall12h.second);
+		c++;
+		if (map.rainfall24h.first)
+			cass_statement_bind_float(statement, c, map.rainfall24h.second);
+		c++;
+		if (map.rainfall48h.first)
+			cass_statement_bind_float(statement, c, map.rainfall48h.second);
+		c++;
+		/*************************************************************/
+		if (map.max_outside_temperature1h.first)
+			cass_statement_bind_float(statement, c, map.max_outside_temperature1h.second);
+		c++;
+		if (map.max_outside_temperature6h.first)
+			cass_statement_bind_float(statement, c, map.max_outside_temperature6h.second);
+		c++;
+		if (map.max_outside_temperature12h.first)
+			cass_statement_bind_float(statement, c, map.max_outside_temperature12h.second);
+		c++;
+		if (map.max_outside_temperature24h.first)
+			cass_statement_bind_float(statement, c, map.max_outside_temperature24h.second);
+		c++;
+		if (map.min_outside_temperature1h.first)
+			cass_statement_bind_float(statement, c, map.min_outside_temperature1h.second);
+		c++;
+		if (map.min_outside_temperature6h.first)
+			cass_statement_bind_float(statement, c, map.min_outside_temperature6h.second);
+		c++;
+		if (map.min_outside_temperature12h.first)
+			cass_statement_bind_float(statement, c, map.min_outside_temperature12h.second);
+		c++;
+		if (map.min_outside_temperature24h.first)
+			cass_statement_bind_float(statement, c, map.min_outside_temperature24h.second);
+		c++;
+		/*************************************************************/
+		if (map.et1h.first)
+			cass_statement_bind_float(statement, c, map.et1h.second);
+		c++;
+		if (map.et12h.first)
+			cass_statement_bind_float(statement, c, map.et12h.second);
+		c++;
+		if (map.et24h.first)
+			cass_statement_bind_float(statement, c, map.et24h.second);
+		c++;
+		if (map.et48h.first)
+			cass_statement_bind_float(statement, c, map.et48h.second);
+		c++;
+		/*************************************************************/
+		if (map.windgust1h.first)
+			cass_statement_bind_float(statement, c, map.windgust1h.second);
+		c++;
+		if (map.windgust12h.first)
+			cass_statement_bind_float(statement, c, map.windgust12h.second);
+		c++;
+		if (map.windgust24h.first)
+			cass_statement_bind_float(statement, c, map.windgust24h.second);
+		c++;
+		/*************************************************************/
+	}
+
 	bool DbConnectionObservations::insertV2DataPoint(const Observation& obs)
 	{
 		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
@@ -767,6 +951,23 @@ namespace meteodata {
 		copy.filterOutImpossibleValues();
 		populateV2InsertionQuery(statement2.get(), copy);
 		query.reset(cass_session_execute(_session.get(), statement2.get()));
+		result.reset(cass_future_get_result(query.get()));
+
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			return false;
+		}
+
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement3{
+			cass_prepared_bind(_insertV2MapDataPoint.get()),
+			cass_statement_free
+		};
+		MapObservation map;
+		getMapValues(obs.station, chrono::system_clock::to_time_t(obs.time), map);
+		populateV2MapInsertionQuery(statement3.get(), copy, map);
+		query.reset(cass_session_execute(_session.get(), statement3.get()));
 		result.reset(cass_future_get_result(query.get()));
 
 		if (!result) {
@@ -1908,5 +2109,211 @@ namespace meteodata {
 		}
 
 		return ret;
+	}
+
+	bool DbConnectionObservations::getMapValues(const CassUuid& uuid, time_t time, MapObservation& obs)
+	{
+		// Truncate all times to seconds, it's enough resolution
+		auto ref = chrono::system_clock::from_time_t(time);
+		auto t1h = ref - chrono::hours{1};
+		auto t3h = ref - chrono::hours{3};
+		auto t6h = ref - chrono::hours{6};
+		auto t12h = ref - chrono::hours{12};
+		auto t24h = ref - chrono::hours{24};
+		auto t48h = ref - chrono::hours{48};
+
+		auto handleResponse = [&](const CassRow* row) {
+			const CassValue* v = cass_row_get_column(row, 0);
+			if (cass_value_is_null(v))
+				return;
+			cass_int64_t timeMillisec;
+			cass_value_get_int64(v, &timeMillisec);
+			auto t = chrono::system_clock::from_time_t(timeMillisec / 1000);
+
+			if (t < t48h)
+				return;
+
+			v = cass_row_get_column(row, 1);
+			std::pair<bool, float> temp = { false, 0.f };
+			if (!cass_value_is_null(v)) {
+				cass_value_get_float(v, &temp.second);
+				temp.first = true;
+			}
+
+			v = cass_row_get_column(row, 2);
+			std::pair<bool, float> maxtemp = { false, 0.f };
+			if (!cass_value_is_null(v)) {
+				cass_value_get_float(v, &maxtemp.second);
+				maxtemp.first = true;
+			}
+
+			v = cass_row_get_column(row, 3);
+			std::pair<bool, float> mintemp = { false, 0.f };
+			if (!cass_value_is_null(v)) {
+				cass_value_get_float(v, &mintemp.second);
+				mintemp.first = true;
+			}
+
+			if (!maxtemp.first && temp.first)
+				maxtemp = std::move(temp);
+			if (maxtemp.first) {
+				if (t > t1h) {
+					if (!obs.max_outside_temperature1h.first || maxtemp.second > obs.max_outside_temperature1h.second) {
+						obs.max_outside_temperature1h = { true, maxtemp.second };
+					}
+				}
+
+				if (t > t6h) {
+					if (!obs.max_outside_temperature6h.first || maxtemp.second > obs.max_outside_temperature6h.second) {
+						obs.max_outside_temperature6h = { true, maxtemp.second };
+					}
+				}
+
+				if (t > t12h) {
+					if (!obs.max_outside_temperature12h.first || maxtemp.second > obs.max_outside_temperature12h.second) {
+						obs.max_outside_temperature12h = { true, maxtemp.second };
+					}
+				}
+
+				if (t > t24h) {
+					if (!obs.max_outside_temperature24h.first || maxtemp.second > obs.max_outside_temperature24h.second) {
+						obs.max_outside_temperature24h = { true, maxtemp.second };
+					}
+				}
+			}
+
+			if (!mintemp.first && temp.first)
+				mintemp = std::move(temp);
+			if (mintemp.first) {
+				if (t > t1h) {
+					if (!obs.min_outside_temperature1h.first || mintemp.second < obs.min_outside_temperature1h.second) {
+						obs.min_outside_temperature1h = { true, mintemp.second };
+					}
+				}
+
+				if (t > t6h) {
+					if (!obs.min_outside_temperature6h.first || mintemp.second < obs.min_outside_temperature6h.second) {
+						obs.min_outside_temperature6h = { true, mintemp.second };
+					}
+				}
+
+				if (t > t12h) {
+					if (!obs.min_outside_temperature12h.first || mintemp.second < obs.min_outside_temperature12h.second) {
+						obs.min_outside_temperature12h = { true, mintemp.second };
+					}
+				}
+
+				if (t > t24h) {
+					if (!obs.min_outside_temperature24h.first || mintemp.second < obs.min_outside_temperature24h.second) {
+						obs.min_outside_temperature24h = { true, mintemp.second };
+					}
+				}
+			}
+
+			v = cass_row_get_column(row, 4);
+			if (!cass_value_is_null(v)) {
+				float rainfall = 0.f;
+				cass_value_get_float(v, &rainfall);
+
+				obs.rainfall1h.first = true;
+				obs.rainfall3h.first = true;
+				obs.rainfall6h.first = true;
+				obs.rainfall12h.first = true;
+				obs.rainfall24h.first = true;
+				obs.rainfall48h.first = true;
+
+				if (t > t1h) {
+					obs.rainfall1h.second += rainfall;
+				}
+				if (t > t3h) {
+					obs.rainfall3h.second += rainfall;
+				}
+				if (t > t6h) {
+					obs.rainfall6h.second += rainfall;
+				}
+				if (t > t12h) {
+					obs.rainfall12h.second += rainfall;
+				}
+				if (t > t24h) {
+					obs.rainfall24h.second += rainfall;
+				}
+				if (t > t48h) {
+					obs.rainfall48h.second += rainfall;
+				}
+			}
+
+			v = cass_row_get_column(row, 5);
+			if (!cass_value_is_null(v)) {
+				float et = 0.f;
+				cass_value_get_float(v, &et);
+
+				obs.et1h.first = true;
+				obs.et12h.first = true;
+				obs.et24h.first = true;
+				obs.et48h.first = true;
+
+				if (t > t1h) {
+					obs.et1h.second += et;
+				}
+				if (t > t12h) {
+					obs.et12h.second += et;
+				}
+				if (t > t24h) {
+					obs.et24h.second += et;
+				}
+				if (t > t48h) {
+					obs.et48h.second += et;
+				}
+			}
+
+			v = cass_row_get_column(row, 6);
+			if (!cass_value_is_null(v)) {
+				float windgust = 0.f;
+				cass_value_get_float(v, &windgust);
+
+				if (t > t1h) {
+					if (!obs.windgust1h.first || obs.windgust1h.second < windgust)
+						obs.windgust1h = { true, windgust };
+				}
+				if (t > t12h) {
+					if (!obs.windgust12h.first || obs.windgust12h.second < windgust)
+						obs.windgust12h = { true, windgust };
+				}
+				if (t > t24h) {
+					if (!obs.windgust24h.first || obs.windgust24h.second < windgust)
+						obs.windgust24h = { true, windgust };
+				}
+			}
+		};
+
+		bool r = performSelect(_selectMapValues.get(),
+			handleResponse,
+			[&](CassStatement* stmt) {
+				cass_statement_bind_uuid(stmt, 0, uuid);
+				cass_statement_bind_uint32(stmt, 1, cass_date_from_epoch(time));
+			}
+		);
+
+		if (r) {
+			r = performSelect(_selectMapValues.get(),
+				handleResponse,
+				[&](CassStatement* stmt) {
+					cass_statement_bind_uuid(stmt, 0, uuid);
+					cass_statement_bind_uint32(stmt, 1, cass_date_from_epoch(time - 24 * 3600));
+				}
+			);
+		}
+
+		if (r) {
+			r = performSelect(_selectMapValues.get(),
+				handleResponse,
+				[&](CassStatement* stmt) {
+					cass_statement_bind_uuid(stmt, 0, uuid);
+					cass_statement_bind_uint32(stmt, 1, cass_date_from_epoch(time - 48 * 3600));
+				}
+			);
+		}
+
+		return r;
 	}
 }

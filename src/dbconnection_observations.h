@@ -40,6 +40,7 @@
 #include "message.h"
 #include "dbconnection_common.h"
 #include "observation.h"
+#include "map_observation.h"
 #include "cassandra_stmt_ptr.h"
 
 namespace meteodata {
@@ -513,6 +514,15 @@ namespace meteodata {
 			 */
 			bool cacheFloat(const CassUuid& station, const std::string& key, const time_t& update, float value);
 
+			/**
+			 * @brief Get all values required to compute the cumulative values for an insertion query
+			 *
+			 * @param[out] obs A map observation structure to store the data
+			 *
+			 * @return True if everything went well, false if an error occurred.
+			 */
+			bool getMapValues(const CassUuid& station, time_t time, MapObservation& obs);
+
 		private:
 			/**
 			 * @brief The prepared statement for the getStationByCoords()
@@ -550,6 +560,10 @@ namespace meteodata {
 			 * @brief The prepared statement for the insertV2FilteredDataPoint() method
 			 */
 			CassandraStmtPtr _insertV2FilteredDataPoint;
+			/**
+			 * @brief The prepared statement for the insertV2MapDataPoint() method
+			 */
+			CassandraStmtPtr _insertV2MapDataPoint;
 			/**
 			 * @brief The prepared statement for the insertV2EntireDayValues() method
 			 */
@@ -662,7 +676,9 @@ namespace meteodata {
 			 */
 			bool getTn(const CassUuid& station, time_t boundary, std::pair<bool, float>& value);
 
+			void populateV2CommonInsertionQuery(CassStatement* statement, const Observation& obs, int& c);
 			void populateV2InsertionQuery(CassStatement* statement, const Observation& obs);
+			void populateV2MapInsertionQuery(CassStatement* statement, const Observation& obs, const MapObservation& map);
 
 			/**
 			 * @brief The prepared statement for the getTx() method
@@ -672,6 +688,10 @@ namespace meteodata {
 			 * @brief The prepared statement for the getTn() method
 			 */
 			CassandraStmtPtr _selectTn;
+			/**
+			 * @brief The prepared statement for the getMapValues() method
+			 */
+			CassandraStmtPtr _selectMapValues;
 	};
 }
 

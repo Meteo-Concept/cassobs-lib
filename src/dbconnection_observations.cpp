@@ -252,6 +252,7 @@ namespace meteodata {
 			"INSERT INTO meteodata_v2.observations_map ("
 			"time,"
 			"station,"
+			"actual_time,"
 			"barometer,"
 			"dewpoint,"
 			"extrahum1, extrahum2,"
@@ -291,7 +292,7 @@ namespace meteodata {
 			"windgust1h, windgust12h, windgust24h "
 			") "
 			" VALUES ("
-			"?, ?,"		// "time, station,"
+			"?, ?, ?,"	// "time, station, actual_time,"
 			"?,"		// "barometer,"
 			"?,"		// "dewpoint,"
 			"?, ?,"		// "extrahum1, extrahum2,"
@@ -837,13 +838,16 @@ namespace meteodata {
 		populateV2CommonInsertionQuery(statement, obs, c);
 	}
 
-	void DbConnectionObservations::populateV2MapInsertionQuery(CassStatement* statement, const Observation& obs, const MapObservation& map)
+	void DbConnectionObservations::populateV2MapInsertionQuery(CassStatement* statement, const Observation& obs, const MapObservation& map, const std::chrono::seconds& insertionTime)
 	{
 		int c = 0;
 
+		chrono::seconds actualTime = obs.time.time_since_epoch();
+
 		/*************************************************************/
-		cass_statement_bind_int64(statement, c++, 1000*obs.time.time_since_epoch().count()); // in ms
+		cass_statement_bind_int64(statement, c++, 1000*insertionTime.count()); // in ms
 		cass_statement_bind_uuid(statement, c++, obs.station);
+		cass_statement_bind_int64(statement, c++, 1000*actualTime.count()); // in ms
 		/*************************************************************/
 
 		populateV2CommonInsertionQuery(statement, obs, c);
@@ -966,7 +970,22 @@ namespace meteodata {
 		};
 		MapObservation map;
 		getMapValues(obs.station, chrono::system_clock::to_time_t(obs.time), map);
-		populateV2MapInsertionQuery(statement3.get(), copy, map);
+		chrono::seconds truncatedTime = obs.time.time_since_epoch() - obs.time.time_since_epoch() % OBSERVATIONS_MAP_TIME_RESOLUTION;
+		populateV2MapInsertionQuery(statement3.get(), copy, map, truncatedTime);
+		query.reset(cass_session_execute(_session.get(), statement3.get()));
+		result.reset(cass_future_get_result(query.get()));
+
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			return false;
+		}
+
+		// Insert the same observation at the following increment, as a
+		// temporary measurement
+		truncatedTime += OBSERVATIONS_MAP_TIME_RESOLUTION;
+		populateV2MapInsertionQuery(statement3.get(), copy, map, truncatedTime);
 		query.reset(cass_session_execute(_session.get(), statement3.get()));
 		result.reset(cass_future_get_result(query.get()));
 

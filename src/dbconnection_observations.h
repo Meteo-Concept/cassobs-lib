@@ -678,7 +678,7 @@ namespace meteodata {
 
 			void populateV2CommonInsertionQuery(CassStatement* statement, const Observation& obs, int& c);
 			void populateV2InsertionQuery(CassStatement* statement, const Observation& obs);
-			void populateV2MapInsertionQuery(CassStatement* statement, const Observation& obs, const MapObservation& map);
+			void populateV2MapInsertionQuery(CassStatement* statement, const Observation& obs, const MapObservation& map, const std::chrono::seconds& insertionTime);
 
 			/**
 			 * @brief The prepared statement for the getTx() method
@@ -692,6 +692,12 @@ namespace meteodata {
 			 * @brief The prepared statement for the getMapValues() method
 			 */
 			CassandraStmtPtr _selectMapValues;
+
+			/**
+			 * @brief The interval of time at which observations are
+			 * rounded on the observations map
+			 */
+			constexpr static chrono::minutes OBSERVATIONS_MAP_TIME_RESOLUTION{5};
 	};
 }
 

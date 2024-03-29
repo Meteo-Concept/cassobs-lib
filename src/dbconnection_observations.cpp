@@ -984,6 +984,7 @@ namespace meteodata {
 
 		// Insert the same observation at the following increment, as a
 		// temporary measurement
+		statement3.reset(cass_prepared_bind(_insertV2MapDataPoint.get()));
 		truncatedTime += OBSERVATIONS_MAP_TIME_RESOLUTION;
 		populateV2MapInsertionQuery(statement3.get(), copy, map, truncatedTime);
 		query.reset(cass_session_execute(_session.get(), statement3.get()));

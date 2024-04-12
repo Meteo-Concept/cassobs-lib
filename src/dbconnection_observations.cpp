@@ -39,6 +39,7 @@
 #include "observation.h"
 #include "map_observation.h"
 #include "cassandra_stmt_ptr.h"
+#include "virtual_station.h"
 
 namespace meteodata {
 	DbConnectionObservations::DbConnectionObservations(const std::string& address, const std::string& user, const std::string& password) :
@@ -455,6 +456,10 @@ namespace meteodata {
 
 		prepareOneStatement(_selectMeteoFranceStations,
 			"SELECT id, active, icao, idstation, date_creation, latitude, longitude, elevation, type FROM meteodata.stationsfr"
+		);
+
+		prepareOneStatement(_selectVirtualStations,
+			"SELECT station, active, period, sources FROM meteodata.virtual_stations"
 		);
 
 		prepareOneStatement(_getRainfall,
@@ -1791,6 +1796,65 @@ namespace meteodata {
 					if (active == cass_true)
 						stations.emplace_back(station, icao, std::string{mfId, sizeMfId}, date, latitude, longitude, elevation, type);
 				}
+		);
+	}
+
+	bool DbConnectionObservations::getAllVirtualStations(std::vector<VirtualStation>& stations)
+	{
+		return performSelect(_selectVirtualStations.get(),
+			[&stations](const CassRow* row) {
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (cass_value_is_null(v))
+					return;
+				CassUuid station;
+				cass_value_get_uuid(v, &station);
+
+				v = cass_row_get_column(row, 1);
+				if (cass_value_is_null(v))
+					return;
+				cass_bool_t active;
+				cass_value_get_bool(v, &active);
+
+				if (active != cass_true)
+					return;
+
+				v = cass_row_get_column(row, 2);
+				if (cass_value_is_null(v))
+					return;
+				int period;
+				cass_value_get_int32(v, &period);
+
+				std::vector<std::pair<CassUuid, std::vector<std::string>>> sources;
+				const CassValue* mappingValue = cass_row_get_column(row, 3);
+				if (!cass_value_is_null(mappingValue)) {
+					std::unique_ptr<CassIterator, void(&)(CassIterator*)> mappingIterator{
+						cass_iterator_from_map(mappingValue),
+						cass_iterator_free
+					};
+					while (cass_iterator_next(mappingIterator.get())) {
+						CassUuid st;
+						cass_value_get_uuid(cass_iterator_get_map_key(mappingIterator.get()), &st);
+
+						auto sourceValue = cass_iterator_get_map_value(mappingIterator.get());
+						if (!cass_value_is_null(sourceValue)) {
+							std::vector<std::string> variables;
+							std::unique_ptr<CassIterator, void(&)(CassIterator*)> variableIterator{
+								cass_iterator_from_collection(sourceValue),
+								cass_iterator_free
+							};
+							while (cass_iterator_next(variableIterator.get())) {
+								const char *var;
+								size_t sizeVar;
+								cass_value_get_string(cass_iterator_get_value(variableIterator.get()), &var, &sizeVar);
+								variables.emplace_back(var, sizeVar);
+							}
+							sources.emplace_back(st, std::move(variables));
+						}
+					}
+				}
+
+				stations.push_back(VirtualStation{station, period, std::move(sources)});
+			}
 		);
 	}
 

@@ -42,6 +42,7 @@
 #include "observation.h"
 #include "map_observation.h"
 #include "cassandra_stmt_ptr.h"
+#include "virtual_station.h"
 
 namespace meteodata {
 	/**
@@ -438,6 +439,16 @@ namespace meteodata {
 			bool getMeteoFranceStations(std::vector<std::tuple<CassUuid, std::string, std::string, int, float, float, int, int>>& stations);
 
 			/**
+			 * @brief Get information relative to virtual stations, i.e. stations whose data is actually
+			 * sourced from a collection of other stations or sensors
+			 *
+			 * @param[out] stations A vector of VirtualStation-s
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getAllVirtualStations(std::vector<VirtualStation>& stations);
+
+			/**
 			 * @brief Get the total rainfall between two datetimes for a station
 			 *
 			 * @param[in] station The station UUID
@@ -635,6 +646,10 @@ namespace meteodata {
 			 * getMeteoFranceStations() method
 			 */
 			CassandraStmtPtr _selectMeteoFranceStations;
+			/**
+			 * @brief The prepared statement for the getAllVirtualStations() method
+			 */
+			CassandraStmtPtr _selectVirtualStations;
 			/**
 			 * @brief The prepared statement for the getRainfall() method
 			 */

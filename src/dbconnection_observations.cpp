@@ -555,6 +555,8 @@ namespace meteodata {
 						obs.set(var, i);
 					}
 				}
+
+				ret = true;
 			}
 		}
 

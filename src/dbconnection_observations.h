@@ -534,6 +534,25 @@ namespace meteodata {
 			 */
 			bool getMapValues(const CassUuid& station, time_t time, MapObservation& obs);
 
+			/**
+			 * @brief Get the last time a scheduler has downloaded * data for
+			 *
+			 * @param[in] scheduler The scheduler identifier
+			 * @param[out] time The time at which the scheduler scheduled for the last time
+			 *
+			 * @return True if everything went well, false if an error occurred.
+			 */
+			bool getLastSchedulerDownloadTime(const std::string& scheduler, time_t& time);
+			/**
+			 * @brief Update the last download time of a scheduler
+			 *
+			 * @param[in] scheduler The scheduler identifier
+			 * @param[in] time The last time the scheduler scheduled
+			 *
+			 * @return True if the insertion/update succeeded, false otherwise
+			 */
+			bool insertLastSchedulerDownloadTime(const std::string& scheduler, const time_t& time);
+
 		private:
 			/**
 			 * @brief The prepared statement for the getStationByCoords()
@@ -669,6 +688,15 @@ namespace meteodata {
 			 * and cacheFloat() methods
 			 */
 			CassandraStmtPtr _insertIntoCache;
+			/**
+			 * @brief The prepared statement for the getLastDownloadTime()
+			 */
+			CassandraStmtPtr _selectLastSchedulerDownloadTime;
+			/**
+			 * @brief The prepared statement for the
+			 * insertLastDownloadTime() method
+			 */
+			CassandraStmtPtr _insertLastSchedulerDownloadTime;
 			/**
 			 * @brief Prepare the Cassandra query/insert statements
 			 */

@@ -486,6 +486,15 @@ namespace meteodata {
 		prepareOneStatement(_insertIntoCache,
 			"INSERT INTO meteodata_v2.cache (station, cache_key, time, value_int, value_float) VALUES (?, ?, ?, ?, ?)"
 		);
+
+		prepareOneStatement(_selectLastSchedulerDownloadTime,
+			"SELECT last_download FROM meteodata.scheduling_status WHERE scheduler=?"
+		);
+
+		prepareOneStatement(_insertLastSchedulerDownloadTime,
+			"INSERT INTO meteodata.scheduling_status (scheduler,last_download) VALUES (?,?)"
+		);
+
 	}
 
 	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
@@ -2401,5 +2410,51 @@ namespace meteodata {
 		}
 
 		return r;
+	}
+
+	bool DbConnectionObservations::getLastSchedulerDownloadTime(const std::string& station, time_t& lastArchiveDownloadTime)
+	{
+		return performSelect(_selectLastSchedulerDownloadTime.get(),
+			[&](const CassRow* row) {
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (cass_value_is_null(v))
+					return;
+				cass_int64_t timeMillisec;
+				cass_value_get_int64(v, &timeMillisec);
+				lastArchiveDownloadTime = timeMillisec / 1000;
+			},
+			[&](CassStatement* stmt) {
+				cass_statement_bind_string_n(stmt, 0, station.c_str(), station.length());
+			}
+		);
+	}
+
+	bool DbConnectionObservations::insertLastSchedulerDownloadTime(const std::string& scheduler, const time_t& time)
+	{
+		std::unique_ptr<CassStatement, void(&)(CassStatement*)> statement{
+			cass_prepared_bind(_insertLastSchedulerDownloadTime.get()),
+			cass_statement_free
+		};
+		cass_statement_bind_string_n(statement.get(), 0, scheduler.c_str(), scheduler.length());
+		cass_statement_bind_int64(statement.get(), 1, time * 1000);
+
+		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
+			cass_session_execute(_session.get(), statement.get()),
+			cass_future_free
+		};
+		std::unique_ptr<const CassResult, void(&)(const CassResult*)> result{
+			cass_future_get_result(query.get()),
+			cass_result_free
+		};
+
+		bool ret = true;
+		if (!result) {
+			const char* error_message;
+			size_t error_message_length;
+			cass_future_error_message(query.get(), &error_message, &error_message_length);
+			ret = false;
+		}
+
+		return ret;
 	}
 }

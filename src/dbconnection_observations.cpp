@@ -462,6 +462,10 @@ namespace meteodata {
 			"SELECT station, active, period, sources FROM meteodata.virtual_stations"
 		);
 
+		prepareOneStatement(_selectNbiotStations,
+			"SELECT station, active, imei, imsi, hmac_key, sensor_type FROM meteodata.nbiot"
+		);
+
 		prepareOneStatement(_getRainfall,
 			"SELECT SUM(rainfall) FROM meteodata_v2.meteo "
 			"WHERE station = ? AND day = ? AND time > ? AND time <= ?"
@@ -1807,6 +1811,58 @@ namespace meteodata {
 					if (active == cass_true)
 						stations.emplace_back(station, icao, std::string{mfId, sizeMfId}, date, latitude, longitude, elevation, type);
 				}
+		);
+	}
+
+	bool DbConnectionObservations::getAllNbiotStations(std::vector<NbiotStation>& stations)
+	{
+		return performSelect(_selectNbiotStations.get(),
+			[&stations](const CassRow* row) {
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (cass_value_is_null(v))
+					return;
+				CassUuid station;
+				cass_value_get_uuid(v, &station);
+
+				v = cass_row_get_column(row, 1);
+				if (cass_value_is_null(v))
+					return;
+				cass_bool_t active;
+				cass_value_get_bool(v, &active);
+
+				if (active != cass_true)
+					return;
+
+				v = cass_row_get_column(row, 2);
+				const char *imei;
+				size_t sizeImei;
+				cass_value_get_string(v, &imei, &sizeImei);
+
+				v = cass_row_get_column(row, 3);
+				const char *imsi;
+				size_t sizeImsi;
+				cass_value_get_string(v, &imsi, &sizeImsi);
+
+				v = cass_row_get_column(row, 4);
+				const char *hmacKey;
+				size_t sizeHmacKey;
+				cass_value_get_string(v, &hmacKey, &sizeHmacKey);
+
+				v = cass_row_get_column(row, 5);
+				const char *sensorType;
+				size_t sizeSensorType;
+				cass_value_get_string(v, &sensorType, &sizeSensorType);
+
+				stations.push_back(
+					NbiotStation{
+						station,
+						std::string{imei, sizeImei},
+						std::string{imsi, sizeImsi},
+						std::string{hmacKey, sizeHmacKey},
+						std::string{sensorType, sizeSensorType}
+					}
+				);
+			}
 		);
 	}
 

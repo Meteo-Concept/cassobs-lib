@@ -12,7 +12,8 @@ include_HEADERS = \
 		monthly_records.h\
 		dbconnection_records.h\
 		dbconnection_jobs.h\
-		virtual_station.h
+		virtual_station.h\
+		nbiot_station.h
 
 libcassobs2_la_SOURCES = \
 		    dbconnection_common.cpp\
@@ -36,14 +37,15 @@ libcassobs2_la_SOURCES = \
 		    observation.cpp \
 		    map_observation.h \
 		    message.h\
-		    virtual_station.h
+		    virtual_station.h\
+		    nbiot_station.h
 
 libcassobs2_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CFLAGS) $(DATE_CFLAGS) $(MYSQL_CFLAGS)
 libcassobs2_la_CXXFLAGS =
 libcassobs2_la_LIBADD = $(PTHREAD_CFLAGS) $(CASSANDRA_LIBS) $(DATE_LIBS) $(MYSQL_LIBS)
 libcassobs2_la_LDFLAGS = -version-info 14:0:4
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations get_meteofrance_stations compute_minmax get_jobs get_map_obs get_virtual_stations
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations get_meteofrance_stations compute_minmax get_jobs get_map_obs get_virtual_stations get_nbiot_stations
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = tests/get_last_data.cpp
@@ -120,3 +122,8 @@ get_virtual_stations_SOURCES = tests/get_virtual_stations.cpp
 get_virtual_stations_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
 get_virtual_stations_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
 get_virtual_stations_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)
+
+get_nbiot_stations_SOURCES = tests/get_nbiot_stations.cpp
+get_nbiot_stations_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
+get_nbiot_stations_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
+get_nbiot_stations_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)

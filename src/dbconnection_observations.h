@@ -43,6 +43,7 @@
 #include "map_observation.h"
 #include "cassandra_stmt_ptr.h"
 #include "virtual_station.h"
+#include "nbiot_station.h"
 
 namespace meteodata {
 	/**
@@ -447,6 +448,14 @@ namespace meteodata {
 			 * @return True if everything went well, false if an error occurred
 			 */
 			bool getAllVirtualStations(std::vector<VirtualStation>& stations);
+			/**
+			 * @brief Get information relative to NB-IoT * stations/sensors
+			 *
+			 * @param[out] stations A vector of NbiotStation-s
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getAllNbiotStations(std::vector<NbiotStation>& stations);
 
 			/**
 			 * @brief Get the total rainfall between two datetimes for a station
@@ -669,6 +678,10 @@ namespace meteodata {
 			 * @brief The prepared statement for the getAllVirtualStations() method
 			 */
 			CassandraStmtPtr _selectVirtualStations;
+			/**
+			 * @brief The prepared statement for the getNbiotStations() method
+			 */
+			CassandraStmtPtr _selectNbiotStations;
 			/**
 			 * @brief The prepared statement for the getRainfall() method
 			 */

@@ -499,6 +499,13 @@ namespace meteodata {
 			"INSERT INTO meteodata.scheduling_status (scheduler,last_download) VALUES (?,?)"
 		);
 
+		prepareOneStatement(_selectLastConfiguration,
+			"SELECT station, active, id, config, added_on FROM meteodata.pending_configurations WHERE station=? ORDER BY id DESC"
+		);
+
+		prepareOneStatement(_selectOneConfiguration,
+			"SELECT station, active, id, config, added_on FROM meteodata.pending_configurations WHERE station=? AND id=?"
+		);
 	}
 
 	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
@@ -2512,5 +2519,92 @@ namespace meteodata {
 		}
 
 		return ret;
+	}
+
+	bool DbConnectionObservations::getLastConfiguration(const CassUuid& station, ModemStationConfiguration& config)
+	{
+		return performSelect(_selectLastConfiguration.get(),
+			[&config](const CassRow* row) {
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (cass_value_is_null(v))
+					return;
+				CassUuid station;
+				cass_value_get_uuid(v, &station);
+
+				v = cass_row_get_column(row, 1);
+				if (cass_value_is_null(v))
+					return;
+				cass_bool_t active;
+				cass_value_get_bool(v, &active);
+
+				if (active != cass_true)
+					return;
+
+				v = cass_row_get_column(row, 2);
+				int id;
+				cass_value_get_int32(v, &id);
+
+				v = cass_row_get_column(row, 3);
+				const char *conf;
+				size_t sizeConf;
+				cass_value_get_string(v, &conf, &sizeConf);
+
+				v = cass_row_get_column(row, 4);
+				int64_t timeMillisec;
+				cass_value_get_int64(v, &timeMillisec);
+
+				config.station = station;
+				config.id = id;
+				config.config = std::string{conf, sizeConf};
+				config.addedOn = timeMillisec / 1000;
+			},
+			[&](CassStatement* stmt) {
+				cass_statement_bind_uuid(stmt, 0, station);
+			}
+		);
+	}
+
+	bool DbConnectionObservations::getOneConfiguration(const CassUuid& station, int id, ModemStationConfiguration& config)
+	{
+		return performSelect(_selectLastConfiguration.get(),
+			[&config](const CassRow* row) {
+				const CassValue* v = cass_row_get_column(row, 0);
+				if (cass_value_is_null(v))
+					return;
+				CassUuid station;
+				cass_value_get_uuid(v, &station);
+
+				v = cass_row_get_column(row, 1);
+				if (cass_value_is_null(v))
+					return;
+				cass_bool_t active;
+				cass_value_get_bool(v, &active);
+
+				if (active != cass_true)
+					return;
+
+				v = cass_row_get_column(row, 2);
+				int id;
+				cass_value_get_int32(v, &id);
+
+				v = cass_row_get_column(row, 3);
+				const char *conf;
+				size_t sizeConf;
+				cass_value_get_string(v, &conf, &sizeConf);
+
+				v = cass_row_get_column(row, 4);
+				int64_t timeMillisec;
+				cass_value_get_int64(v, &timeMillisec);
+
+				config.station = station;
+				config.id = id;
+				config.config = std::string{conf, sizeConf};
+				config.addedOn = timeMillisec / 1000;
+			},
+			[&](CassStatement* stmt) {
+				cass_statement_bind_uuid(stmt, 0, station);
+				cass_statement_bind_int32(stmt, 1, id);
+			}
+		);
 	}
 }

@@ -44,6 +44,7 @@
 #include "cassandra_stmt_ptr.h"
 #include "virtual_station.h"
 #include "nbiot_station.h"
+#include "modem_station_configuration.h"
 
 namespace meteodata {
 	/**
@@ -562,6 +563,24 @@ namespace meteodata {
 			 */
 			bool insertLastSchedulerDownloadTime(const std::string& scheduler, const time_t& time);
 
+			/**
+			 * @brief Get the last reconfiguration applicable to a modem-equipped station
+			 *
+			 * @param[out] stations A vector of ModemStationConfiguration-s
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getLastConfiguration(const CassUuid& station, ModemStationConfiguration& config);
+
+			/**
+			 * @brief Get the last reconfiguration applicable to a modem-equipped station
+			 *
+			 * @param[out] stations A vector of ModemStationConfiguration-s
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getOneConfiguration(const CassUuid& station, int id, ModemStationConfiguration& config);
+
 		private:
 			/**
 			 * @brief The prepared statement for the getStationByCoords()
@@ -710,6 +729,16 @@ namespace meteodata {
 			 * insertLastDownloadTime() method
 			 */
 			CassandraStmtPtr _insertLastSchedulerDownloadTime;
+			/**
+			 * @brief The prepared statement for the
+			 * getLastConfiguration() method
+			 */
+			CassandraStmtPtr _selectLastConfiguration;
+			/**
+			 * @brief The prepared statement for the
+			 * getOneConfiguration() method
+			 */
+			CassandraStmtPtr _selectOneConfiguration;
 			/**
 			 * @brief Prepare the Cassandra query/insert statements
 			 */

@@ -500,7 +500,7 @@ namespace meteodata {
 		);
 
 		prepareOneStatement(_selectLastConfiguration,
-			"SELECT station, active, id, config, added_on FROM meteodata.pending_configurations WHERE station=? ORDER BY id DESC"
+			"SELECT station, active, id, config, added_on FROM meteodata.pending_configurations WHERE station=? ORDER BY id DESC LIMIT 1"
 		);
 
 		prepareOneStatement(_selectOneConfiguration,

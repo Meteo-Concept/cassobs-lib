@@ -80,6 +80,9 @@ public:
 	std::pair<bool,float> soiltemp50cm             = {false,0};
 	std::pair<bool,float> soiltemp60cm             = {false,0};
 	std::pair<bool,float> leafwetness_percent1     = {false,0};
+	std::pair<bool,float> voltage_battery          = {false,0};
+	std::pair<bool,float> voltage_solar_panel      = {false,0};
+	std::pair<bool,float> voltage_backup           = {false,0};
 
 	template<typename ColumnType>
 	ColumnType get(const std::string&) const
@@ -118,7 +121,7 @@ private:
 		"leafwetness_timeratio1"
 	};
 
-	static constexpr std::array<char const *, 80> VALID_VAR_FLOATS = {
+	static constexpr std::array<char const *, 83> VALID_VAR_FLOATS = {
 		"barometer", "pressure",
 		"dewpoint", "dew_point",
 		"extratemp1", "extra_temperature1",
@@ -154,7 +157,8 @@ private:
 		"soiltemp40cm", "soil_temp_40cm", "soil_temperature_40cm",
 		"soiltemp50cm", "soil_temp_50cm", "soil_temperature_50cm",
 		"soiltemp60cm", "soil_temp_60cm", "soil_temperature_60cm",
-		"leafwetness_percent1", "leaf_wetness_percent1"
+		"leafwetness_percent1", "leaf_wetness_percent1",
+		"voltage_battery", "voltage_solar_panel", "voltage_backup"
 	};
 };
 

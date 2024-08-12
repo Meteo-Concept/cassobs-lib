@@ -165,6 +165,15 @@ void Observation::set(const std::string& column, float value)
 	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
 		leafwetness_percent1.first = true;
 		leafwetness_percent1.second = value;
+	} else if (column == "voltage_battery") {
+		voltage_battery.first = true;
+		voltage_battery.second = value;
+	} else if (column == "voltage_solar_panel") {
+		voltage_solar_panel.first = true;
+		voltage_solar_panel.second = value;
+	} else if (column == "voltage_backup") {
+		voltage_backup.first = true;
+		voltage_backup.second = value;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not a float");
 	}
@@ -309,6 +318,12 @@ float Observation::get<float>(const std::string& column) const
 		return soiltemp60cm.second;
 	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
 		return leafwetness_percent1.second;
+	} else if (column == "voltage_battery") {
+		return voltage_battery.second;
+	} else if (column == "voltage_solar_panel") {
+		return voltage_solar_panel.second;
+	} else if (column == "voltage_backup") {
+		return voltage_backup.second;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist or is not a float");
 	}
@@ -461,6 +476,12 @@ bool Observation::isPresent(const std::string& column) const
 		return soiltemp60cm.first;
 	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
 		return leafwetness_percent1.first;
+	} else if (column == "voltage_battery") {
+		return voltage_battery.first;
+	} else if (column == "voltage_solar_panel") {
+		return voltage_solar_panel.first;
+	} else if (column == "voltage_backup") {
+		return voltage_backup.first;
 	} else {
 		throw std::runtime_error("Column '" + column + "' does not exist");
 	}
@@ -650,6 +671,16 @@ void Observation::filterOutImpossibleValues()
 	leafwetness_percent1.first = leafwetness_percent1.first
 		&& leafwetness_percent1.second >= Filter::MIN_PERCENTAGE
 		&& leafwetness_percent1.second <= Filter::MAX_PERCENTAGE;
+	/*************************************************************/
+	voltage_battery.first = voltage_battery.first
+		&& voltage_battery.second >= Filter::MIN_VOLTAGE
+		&& voltage_battery.second >= Filter::MAX_VOLTAGE;
+	voltage_solar_panel.first = voltage_solar_panel.first
+		&& voltage_solar_panel.second >= Filter::MIN_VOLTAGE
+		&& voltage_solar_panel.second >= Filter::MAX_VOLTAGE;
+	voltage_backup.first = voltage_backup.first
+		&& voltage_backup.second >= Filter::MIN_VOLTAGE
+		&& voltage_backup.second >= Filter::MAX_VOLTAGE;
 	/*************************************************************/
 }
 

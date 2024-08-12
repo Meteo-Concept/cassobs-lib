@@ -41,6 +41,8 @@ struct Filter {
     static constexpr float MAX_UV = 140;
     static constexpr float MIN_PERCENTAGE = 0;
     static constexpr float MAX_PERCENTAGE = 100;
+    static constexpr float MIN_VOLTAGE = 0.f;
+    static constexpr float MAX_VOLTAGE = 50000.f;
 };
 
 

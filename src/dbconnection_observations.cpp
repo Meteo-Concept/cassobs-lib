@@ -560,7 +560,8 @@ namespace meteodata {
 						"soilmoistures40cm", "soilmoistures50cm", "soilmoistures60cm",
 						"soiltemp10cm", "soiltemp20cm", "soiltemp30cm",
 						"soiltemp40cm", "soiltemp50cm", "soiltemp60cm",
-						"leaf_wetness_percent1"
+						"leaf_wetness_percent1",
+						"voltage_battery", "voltage_solar_panel", "voltage_backup"
 					}) {
 					value = cass_row_get_column_by_name(row, var);
 					if (!cass_value_is_null(value)) {
@@ -854,6 +855,16 @@ namespace meteodata {
 		/*************************************************************/
 		if (obs.leafwetness_percent1.first)
 			cass_statement_bind_float(statement, c, obs.leafwetness_percent1.second);
+		c++;
+		/*************************************************************/
+		if (obs.voltage_battery.first)
+			cass_statement_bind_float(statement, c, obs.voltage_backup.second);
+		c++;
+		if (obs.voltage_solar_panel.first)
+			cass_statement_bind_float(statement, c, obs.voltage_solar_panel.second);
+		c++;
+		if (obs.voltage_backup.first)
+			cass_statement_bind_float(statement, c, obs.voltage_backup.second);
 		c++;
 		/*************************************************************/
 	}

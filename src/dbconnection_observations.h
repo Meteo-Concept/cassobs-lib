@@ -566,7 +566,8 @@ namespace meteodata {
 			/**
 			 * @brief Get the last reconfiguration applicable to a modem-equipped station
 			 *
-			 * @param[out] stations A vector of ModemStationConfiguration-s
+			 * @param[out] config A ModemStationConfiguration. Will be left untouched if no suitable
+			 * configuration is found.
 			 *
 			 * @return True if everything went well, false if an error occurred
 			 */
@@ -575,11 +576,31 @@ namespace meteodata {
 			/**
 			 * @brief Get the last reconfiguration applicable to a modem-equipped station
 			 *
-			 * @param[out] stations A vector of ModemStationConfiguration-s
+			 * @param[out] config A ModemStationConfiguration. Will be left untouched if no suitable
+			 * configuration is found.
 			 *
 			 * @return True if everything went well, false if an error occurred
 			 */
 			bool getOneConfiguration(const CassUuid& station, int id, ModemStationConfiguration& config);
+			/**
+			 * @brief Retrieve the oldest still active configuration applicable to a station
+			 *
+			 * @param[out] config A ModemStationConfiguration. Will be left untouched if no suitable
+			 * configuration is found.
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool getOldestConfiguration(const CassUuid& station, ModemStationConfiguration& config);
+
+			/**
+			 * @brief Update the status of a configuration, to mark it as done or not
+			 *
+			 * @param[in] status The new status, true to mark the configuration as applied and no longer
+			 * active, false otherwise
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool updateConfigurationStatus(const CassUuid& station, int id, bool active);
 
 		private:
 			/**
@@ -739,6 +760,16 @@ namespace meteodata {
 			 * getOneConfiguration() method
 			 */
 			CassandraStmtPtr _selectOneConfiguration;
+			/**
+			 * @brief The prepared statement for the
+			 * getOldestConfiguration() method
+			 */
+			CassandraStmtPtr _selectOldestConfiguration;
+			/**
+			 * @brief The prepared statement for the
+			 * updateConfigurationStatus() method
+			 */
+			CassandraStmtPtr _updateConfigurationStatus;
 			/**
 			 * @brief Prepare the Cassandra query/insert statements
 			 */

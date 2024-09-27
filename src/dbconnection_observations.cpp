@@ -2683,9 +2683,9 @@ namespace meteodata {
 			cass_prepared_bind(_updateConfigurationStatus.get()),
 			cass_statement_free
 		};
-		cass_statement_bind_uuid(statement.get(), 0, station);
-		cass_statement_bind_int32(statement.get(), 1, id);
-		cass_statement_bind_bool(statement.get(), 2, cass_bool_t(active));
+		cass_statement_bind_bool(statement.get(), 0, active ? cass_true : cass_false);
+		cass_statement_bind_uuid(statement.get(), 1, station);
+		cass_statement_bind_int32(statement.get(), 2, id);
 		std::unique_ptr<CassFuture, void(&)(CassFuture*)> query{
 			cass_session_execute(_session.get(), statement.get()),
 			cass_future_free

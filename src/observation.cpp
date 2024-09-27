@@ -608,7 +608,8 @@ void Observation::filterOutImpossibleValues()
 	/*************************************************************/
 	windgust.first = windgust.first
 		&& windgust.second >= Filter::MIN_WINDGUST_SPEED
-		&& windgust.second <= Filter::MAX_WINDGUST_SPEED;
+		&& windgust.second <= Filter::MAX_WINDGUST_SPEED
+		&& (windspeed.first || windgust.second > 0);
 	/*************************************************************/
 	min_windspeed.first = min_windspeed.first
 		&& min_windspeed.second >= Filter::MIN_WIND_SPEED

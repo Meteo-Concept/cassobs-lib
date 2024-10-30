@@ -36,6 +36,7 @@
 
 #include <cassandra.h>
 #include <date.h>
+#include <pqxx/pqxx>
 
 #include "message.h"
 #include "dbconnection_common.h"
@@ -63,7 +64,14 @@ namespace meteodata {
 			 * @param user the username to use
 			 * @param password the password corresponding to the username
 			 */
-			DbConnectionObservations(const std::string& address = "127.0.0.1", const std::string& user = "", const std::string& password = "");
+			DbConnectionObservations(
+				const std::string& address = "127.0.0.1",
+				const std::string& user = "",
+				const std::string& password = "",
+				const std::string& pgaddress = "127.0.0.1",
+				const std::string& pguser = "",
+				const std::string& pgpassword = ""
+			);
 			/**
 			 * @brief Close the connection and destroy the database handle
 			 */
@@ -181,6 +189,25 @@ namespace meteodata {
 			 * inserted, false otherwise
 			 */
 			bool insertV2DataPoint(const Observation& obs);
+
+			bool insertV2DataPointInTimescaleDB(const Observation& obs);
+
+			template<typename I>
+			bool insertV2DataPointsInTimescaleDB(I begin, I end)
+			{
+				try {
+					pqxx::work tx{_pqConnection};
+					for (I it = begin ; it != end ; ++it) {
+						Observation copy{*it};
+						copy.filterOutImpossibleValues();
+						doInsertV2DataPointInTimescaleDB(*it, tx);
+					}
+					tx.commit();
+				} catch (const pqxx::pqxx_exception& e) {
+					return false;
+				}
+				return true;
+			}
 
 			/**
 			 * @brief Insert a new special data point in the V2 database
@@ -775,6 +802,10 @@ namespace meteodata {
 			 */
 			void prepareStatements();
 
+			pqxx::connection _pqConnection;
+
+			const static std::string UPSERT_OBSERVATION;
+
 			/**
 			 * @brief Get the max temperature of a day, if recorded in the observations database
 			 *
@@ -795,6 +826,8 @@ namespace meteodata {
 			void populateV2CommonInsertionQuery(CassStatement* statement, const Observation& obs, int& c);
 			void populateV2InsertionQuery(CassStatement* statement, const Observation& obs);
 			void populateV2MapInsertionQuery(CassStatement* statement, const Observation& obs, const MapObservation& map, const std::chrono::seconds& insertionTime);
+
+			void doInsertV2DataPointInTimescaleDB(const Observation& obs, pqxx::transaction_base& tx);
 
 			/**
 			 * @brief The prepared statement for the getTx() method

@@ -46,6 +46,9 @@ int main()
 	std::string dataAddress{std::getenv("CASSANDRA_HOST")};
 	std::string dataUser{std::getenv("CASSANDRA_USER")};
 	std::string dataPassword{std::getenv("CASSANDRA_PASSWORD")};
+	std::string pgAddress{std::getenv("POSTGRES_HOST")};
+	std::string pgUser{std::getenv("POSTGRES_USER")};
+	std::string pgPassword{std::getenv("POSTGRES_PASSWORD")};
 
 	cass_log_set_level(CASS_LOG_INFO);
 	CassLogCallback logCallback =
@@ -61,7 +64,7 @@ int main()
 		};
 	cass_log_set_callback(logCallback, NULL);
 
-	DbConnectionObservations db(dataAddress, dataUser, dataPassword);
+	DbConnectionObservations db(dataAddress, dataUser, dataPassword, pgAddress, pgUser, pgPassword);
 	MapObservation obs;
 	CassUuid uuid;
 	cass_uuid_from_string("4f460e98-562e-4366-936a-92593155667d", &uuid);

@@ -22,6 +22,7 @@
  */
 
 #include <exception>
+#include <optional>
 
 #include <cassandra.h>
 #include <date.h>

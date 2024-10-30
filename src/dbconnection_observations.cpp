@@ -29,11 +29,13 @@
 #include <memory>
 #include <cstring>
 #include <map>
+#include <optional>
 
 #include <cassandra.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <date.h>
+#include <pqxx/pqxx>
 
 #include "dbconnection_observations.h"
 #include "observation.h"
@@ -42,8 +44,13 @@
 #include "virtual_station.h"
 
 namespace meteodata {
-	DbConnectionObservations::DbConnectionObservations(const std::string& address, const std::string& user, const std::string& password) :
-		DbConnectionCommon(address, user, password)
+	const std::string DbConnectionObservations::UPSERT_OBSERVATION = "upsert_observation";
+
+	DbConnectionObservations::DbConnectionObservations(
+			const std::string& address, const std::string& user, const std::string& password,
+			const std::string& pqaddress, const std::string& pquser, const std::string& pqpassword) :
+		DbConnectionCommon(address, user, password),
+		_pqConnection{"host=" + pqaddress + " user=" + pquser + " password=" + pqpassword + " dbname=meteodata"}
 	{
 		DbConnectionObservations::prepareStatements();
 	}
@@ -521,6 +528,106 @@ namespace meteodata {
 		prepareOneStatement(_updateConfigurationStatus,
 			"UPDATE meteodata.pending_configurations SET active=? WHERE station=? AND id=?"
 		);
+
+		_pqConnection.prepare(UPSERT_OBSERVATION,
+			"INSERT INTO meteodata.observations ("
+			"station,"
+			"datetime,"
+			"barometer,"
+			"dewpoint,"
+			"extrahum1, extrahum2,"
+			"extratemp1,extratemp2, extratemp3,"
+			"heatindex,"
+			"insidehum,insidetemp,"
+			"leaftemp1, leaftemp2,"
+			"leafwetnesses1, leafwetnesses2,"
+			"outsidehum,outsidetemp,"
+			"rainrate, rainfall,"
+			"et,"
+			"soilmoistures1, soilmoistures2, soilmoistures3,"
+			"soilmoistures4,"
+			"soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"solarrad,"
+			"thswindex,"
+			"uv,"
+			"windchill,"
+			"winddir, windgust, min_windspeed, windspeed,"
+			"insolation_time,"
+			"min_outside_temperature, max_outside_temperature,"
+			"leafwetnesses_timeratio1, "
+			"soilmoistures10cm, soilmoistures20cm, "
+			"soilmoistures30cm, soilmoistures40cm, "
+			"soilmoistures50cm, soilmoistures60cm, "
+			"soiltemp10cm, soiltemp20cm, "
+			"soiltemp30cm, soiltemp40cm, "
+			"soiltemp50cm, soiltemp60cm,"
+			"leaf_wetness_percent1, "
+			"voltage_battery, voltage_solar_panel, voltage_backup "
+			") "
+			" VALUES ("
+			"$1,"		// "station,"
+			"$2,"		// "datetime,"
+			"$3,"		// "barometer,"
+			"$4,"		// "dewpoint,"
+			"$5, $6,"	// "extrahum1, extrahum2,"
+			"$7,$8,$9,"	// "extratemp1,extratemp2, extratemp3,"
+			"$10,"		// "heatindex,"
+			"$11,$12,"	// "insidehum,insidetemp,"
+			"$13,$14,"	// "leaftemp1, leaftemp2,"
+			"$15,$16,"	// "leafwetnesses1, leafwetnesses2,"
+			"$17,$18,"	// "outsidehum,outsidetemp,"
+			"$19,$20,"	// "rainrate, rainfall,"
+			"$21,"		// "et,"
+			"$22,$23,$24,"	// "soilmoistures1, soilmoistures2, soilmoistures3,"
+			"$25,"		// "soilmoistures4,"
+			"$26, $27, $28, $29,"	// "soiltemp1, soiltemp2, soiltemp3, soiltemp4,"
+			"$30,"		// "solarrad,"
+			"$31,"		// "thswindex,"
+			"$32,"		// "uv,"
+			"$33,"		// "windchill,"
+			"$34, $35, $36, $37,"	// "winddir, windgust, min_windspeed, windspeed,"
+			"$38,"		// "insolation_time"
+			"$39,$40,"	// "min_outside_temperature, max_outside_temperature"
+			"$41,"		// "leafwetnesses_timeratio1"
+			"$42,$43,$44,"	// "soilmoistures10cm, soilmoistures20cm, soilmoistures30cm"
+			"$45,$46,$47,"	// "soilmoistures40cm, soilmoistures50cm, soilmoistures60cm"
+			"$48,$49,$50,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
+			"$51,$52,$53,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
+			"$54,"		// "leaf_wetness_percent1"
+			"$55,$56,$57 "	// "voltage_battery, voltage_solar_panel, voltage_backup"
+			") ON CONFLICT (station, datetime) DO UPDATE "
+			" SET barometer=$3,"
+			"dewpoint=$4,"
+			"extrahum1=$5, extrahum2=$6,"
+			"extratemp1=$7,extratemp2=$8, extratemp3=$9,"
+			"heatindex=$10,"
+			"insidehum=$11,insidetemp=$12,"
+			"leaftemp1=$13, leaftemp2=$14,"
+			"leafwetnesses1=$15, leafwetnesses2=$16,"
+			"outsidehum=$17,outsidetemp=$18,"
+			"rainrate=$19, rainfall=$20,"
+			"et=$21,"
+			"soilmoistures1=$22, soilmoistures2=$23, soilmoistures3=$24,"
+			"soilmoistures4=$25,"
+			"soiltemp1=$26, soiltemp2=$27, soiltemp3=$28, soiltemp4=$29,"
+			"solarrad=$30,"
+			"thswindex=$31,"
+			"uv=$32,"
+			"windchill=$33,"
+			"winddir=$34, windgust=$35, min_windspeed=$36, windspeed=$37,"
+			"insolation_time=$38,"
+			"min_outside_temperature=$39, max_outside_temperature=$40,"
+			"leafwetnesses_timeratio1=$41, "
+			"soilmoistures10cm=$42, soilmoistures20cm=$43, "
+			"soilmoistures30cm=$44, soilmoistures40cm=$45, "
+			"soilmoistures50cm=$46, soilmoistures60cm=$47, "
+			"soiltemp10cm=$48, soiltemp20cm=$49, "
+			"soiltemp30cm=$50, soiltemp40cm=$51, "
+			"soiltemp50cm=$52, soiltemp60cm=$53,"
+			"leaf_wetness_percent1=$54, "
+			"voltage_battery=$55, voltage_solar_panel=$56, voltage_backup=$57 "
+		);
+
 	}
 
 	bool DbConnectionObservations::getLastDataBefore(const CassUuid& station, time_t boundary, Observation& obs)
@@ -1050,6 +1157,83 @@ namespace meteodata {
 			return false;
 		}
 		return true;
+	}
+
+	bool DbConnectionObservations::insertV2DataPointInTimescaleDB(const Observation& obs)
+	{
+		pqxx::work tx{_pqConnection};
+		try {
+			doInsertV2DataPointInTimescaleDB(obs, tx);
+			tx.commit();
+		} catch (const pqxx::pqxx_exception& e) {
+			return false;
+		}
+		return true;
+	}
+
+	void DbConnectionObservations::doInsertV2DataPointInTimescaleDB(const Observation& obs, pqxx::transaction_base& tx)
+	{
+		char uuid[CASS_UUID_STRING_LENGTH];
+		cass_uuid_string(obs.station, uuid);
+		tx.exec_prepared0(UPSERT_OBSERVATION,
+			uuid,
+			date::format("%F %T%z", obs.time),
+			obs.barometer.first ? &obs.barometer.second : nullptr,
+			obs.dewpoint.first ? &obs.dewpoint.second : nullptr,
+			obs.extrahum[0].first ? &obs.extrahum[0].second : nullptr,
+			obs.extrahum[1].first ? &obs.extrahum[1].second : nullptr,
+			obs.extratemp[0].first ? &obs.extratemp[0].second : nullptr,
+			obs.extratemp[1].first ? &obs.extratemp[1].second : nullptr,
+			obs.extratemp[2].first ? &obs.extratemp[2].second : nullptr,
+			obs.heatindex.first ? &obs.heatindex.second : nullptr,
+			obs.insidehum.first ? &obs.insidehum.second : nullptr,
+			obs.insidetemp.first ? &obs.insidetemp.second : nullptr,
+			obs.leaftemp[0].first ? &obs.leaftemp[0].second : nullptr,
+			obs.leaftemp[1].first ? &obs.leaftemp[1].second : nullptr,
+			obs.leafwetnesses[0].first ? &obs.leafwetnesses[0].second : nullptr,
+			obs.leafwetnesses[1].first ? &obs.leafwetnesses[1].second : nullptr,
+			obs.outsidehum.first ? &obs.outsidehum.second : nullptr,
+			obs.outsidetemp.first ? &obs.outsidetemp.second : nullptr,
+			obs.rainrate.first ? &obs.rainrate.second : nullptr,
+			obs.rainfall.first ? &obs.rainfall.second : nullptr,
+			obs.et.first ? &obs.et.second : nullptr,
+			obs.soilmoistures[0].first ? &obs.soilmoistures[0].second : nullptr,
+			obs.soilmoistures[1].first ? &obs.soilmoistures[1].second : nullptr,
+			obs.soilmoistures[2].first ? &obs.soilmoistures[2].second : nullptr,
+			obs.soilmoistures[3].first ? &obs.soilmoistures[3].second : nullptr,
+			obs.soiltemp[0].first ? &obs.soiltemp[0].second : nullptr,
+			obs.soiltemp[1].first ? &obs.soiltemp[1].second : nullptr,
+			obs.soiltemp[2].first ? &obs.soiltemp[2].second : nullptr,
+			obs.soiltemp[3].first ? &obs.soiltemp[3].second : nullptr,
+			obs.solarrad.first ? &obs.solarrad.second : nullptr,
+			obs.thswindex.first ? &obs.thswindex.second : nullptr,
+			obs.uv.first ? &obs.uv.second : nullptr,
+			obs.windchill.first ? &obs.windchill.second : nullptr,
+			obs.winddir.first ? &obs.winddir.second : nullptr,
+			obs.windgust.first ? &obs.windgust.second : nullptr,
+			obs.min_windspeed.first ? &obs.min_windspeed.second : nullptr,
+			obs.windspeed.first ? &obs.windspeed.second : nullptr,
+			obs.insolation_time.first ? &obs.insolation_time.second : nullptr,
+			obs.min_outside_temperature.first ? &obs.min_outside_temperature.second : nullptr,
+			obs.max_outside_temperature.first ? &obs.max_outside_temperature.second : nullptr,
+			obs.leafwetness_timeratio1.first ? &obs.leafwetness_timeratio1.second : nullptr,
+			obs.soilmoistures10cm.first ? &obs.soilmoistures10cm.second : nullptr,
+			obs.soilmoistures20cm.first ? &obs.soilmoistures20cm.second : nullptr,
+			obs.soilmoistures30cm.first ? &obs.soilmoistures30cm.second : nullptr,
+			obs.soilmoistures40cm.first ? &obs.soilmoistures40cm.second : nullptr,
+			obs.soilmoistures50cm.first ? &obs.soilmoistures50cm.second : nullptr,
+			obs.soilmoistures60cm.first ? &obs.soilmoistures60cm.second : nullptr,
+			obs.soiltemp10cm.first ? &obs.soiltemp10cm.second : nullptr,
+			obs.soiltemp20cm.first ? &obs.soiltemp20cm.second : nullptr,
+			obs.soiltemp30cm.first ? &obs.soiltemp30cm.second : nullptr,
+			obs.soiltemp40cm.first ? &obs.soiltemp40cm.second : nullptr,
+			obs.soiltemp50cm.first ? &obs.soiltemp50cm.second : nullptr,
+			obs.soiltemp60cm.first ? &obs.soiltemp60cm.second : nullptr,
+			obs.leafwetness_percent1.first ? &obs.leafwetness_percent1.second : nullptr,
+			obs.voltage_battery.first ? &obs.voltage_battery.second : nullptr,
+			obs.voltage_backup.first ? &obs.voltage_backup.second : nullptr,
+			obs.voltage_solar_panel.first ? &obs.voltage_solar_panel.second : nullptr
+		);
 	}
 
 	bool DbConnectionObservations::insertV2EntireDayValues(const CassUuid station, const time_t& time, std::pair<bool, float> rainfall24, std::pair<bool, int> insolationTime24)

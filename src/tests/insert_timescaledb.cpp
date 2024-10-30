@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020  SAS JD Environnement <contact@meteo-concept.fr>
+ * Copyright (C) 2024  SAS Météo Concept <contact@meteo-concept.fr>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <chrono>
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
@@ -64,22 +65,14 @@ int main()
 	cass_log_set_callback(logCallback, NULL);
 
 	DbConnectionObservations db(dataAddress, dataUser, dataPassword, pgAddress, pgUser, pgPassword);
-	std::vector<std::tuple<CassUuid, std::string, int, std::map<std::string, std::string>>> v;
-	db.getAllFieldClimateApiStations(v);
-	for (const auto& s: v) {
-		char uuid[CASS_UUID_STRING_LENGTH];
-		cass_uuid_string(std::get<0>(s), uuid);
-		std::cout << "Station " << uuid << "\n"
-			  << "\tFieldClimate id " << std::get<1>(s) << "\n"
-			  << "\ttz " << std::get<2>(s) << "\n";
+	Observation obs;
+	CassUuid uuid;
+	cass_uuid_from_string("00000000-0000-0000-0000-111111111111", &uuid);
+	obs.station = uuid;
+	obs.time = date::floor<chrono::seconds>(std::chrono::system_clock::now());
+	obs.barometer = {true, 1015.3f};
+	obs.outsidetemp = {true, 17.4f};
+	obs.outsidehum = {true, 83};
 
-		const std::map<std::string, std::string>& sensors = std::get<3>(s);
-		if (!sensors.empty()) {
-			for (const auto& s : sensors) {
-				std::cout << "\tvariable " << s.first << " : " << "sensor " << s.second << "\n";
-			}
-		} else {
-			std::cout << "\tNo sensors\n";
-		}
-	}
+	db.insertV2DataPointInTimescaleDB(obs);
 }

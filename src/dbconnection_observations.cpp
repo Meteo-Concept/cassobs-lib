@@ -30,6 +30,7 @@
 #include <cstring>
 #include <map>
 #include <optional>
+#include <mutex>
 
 #include <cassandra.h>
 #include <syslog.h>
@@ -1161,6 +1162,7 @@ namespace meteodata {
 
 	bool DbConnectionObservations::insertV2DataPointInTimescaleDB(const Observation& obs)
 	{
+		std::lock_guard<std::mutex> mutexed{_pqTransactionMutex};
 		pqxx::work tx{_pqConnection};
 		try {
 			doInsertV2DataPointInTimescaleDB(obs, tx);

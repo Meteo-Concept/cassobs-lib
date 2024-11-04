@@ -33,6 +33,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <mutex>
 
 #include <cassandra.h>
 #include <date.h>
@@ -195,6 +196,7 @@ namespace meteodata {
 			template<typename I>
 			bool insertV2DataPointsInTimescaleDB(I begin, I end)
 			{
+				std::lock_guard<std::mutex> mutexed{_pqTransactionMutex};
 				try {
 					pqxx::work tx{_pqConnection};
 					for (I it = begin ; it != end ; ++it) {
@@ -803,6 +805,8 @@ namespace meteodata {
 			void prepareStatements();
 
 			pqxx::connection _pqConnection;
+
+			std::mutex _pqTransactionMutex;
 
 			const static std::string UPSERT_OBSERVATION;
 

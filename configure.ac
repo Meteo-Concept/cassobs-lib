@@ -13,6 +13,8 @@ AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects])
 # For compiling
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_17
+AC_LANG([C++])
+
 # For libtooling
 AM_PROG_AR
 # For pkg-configing

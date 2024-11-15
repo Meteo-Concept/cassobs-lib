@@ -200,8 +200,6 @@ namespace meteodata {
 				try {
 					pqxx::work tx{_pqConnection};
 					for (I it = begin ; it != end ; ++it) {
-						Observation copy{*it};
-						copy.filterOutImpossibleValues();
 						doInsertV2DataPointInTimescaleDB(*it, tx);
 					}
 					tx.commit();

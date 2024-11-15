@@ -25,12 +25,14 @@
 #include <mutex>
 #include <exception>
 #include <chrono>
+#include <pqxx/except.hxx>
 #include <vector>
 #include <string>
 
 #include <cassandra.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <pqxx/pqxx>
 
 #include "dbconnection_minmax.h"
 #include "dbconnection_common.h"
@@ -38,20 +40,65 @@
 
 using namespace date;
 
+void pqxx::string_traits<std::vector<int>, void>::from_string(const char str[], std::vector<int>& obj)
+{
+	if (str[0] != '{') {
+		throw std::runtime_error("Array format error");
+	}
+	std::string s{str, ::strlen(str)};
+	std::istringstream is{s};
+	int next = '{';
+	while (is && next != '}' && next != ',') {
+		int n;
+		is >> n;
+		if (is) {
+			obj.push_back(n);
+			next = is.get();
+		}
+	}
+	if (next != '}') {
+		throw std::runtime_error("Array format error");
+	}
+}
+
+std::string pqxx::string_traits<std::vector<int>, void>::to_string(std::vector<int> obj)
+{
+	std::ostringstream os;
+	os << "{";
+	auto it = obj.begin();
+	if (it != obj.end()) {
+		os << *it;
+	}
+	while (it != obj.end()) {
+		os << "," << (*it);
+	}
+	os << "}";
+	return os.str();
+}
+
 namespace meteodata {
 
 constexpr char DbConnectionMinmax::INSERT_DATAPOINT_STMT[];
+constexpr char DbConnectionMinmax::UPSERT_DATAPOINT_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_ALL_DAY_STMT[];
+constexpr char DbConnectionMinmax::SELECT_VALUES_ALL_DAY_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_BEFORE_6H_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_AFTER_6H_STMT[];
+constexpr char DbConnectionMinmax::SELECT_VALUES_FROM_6H_TO_6H_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_BEFORE_18H_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_AFTER_18H_STMT[];
+constexpr char DbConnectionMinmax::SELECT_VALUES_FROM_18H_TO_18H_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_YEARLY_VALUES_STMT[];
+constexpr char DbConnectionMinmax::SELECT_YEARLY_VALUES_POSTGRESQL_STMT[];
 
 namespace chrono = std::chrono;
 
-DbConnectionMinmax::DbConnectionMinmax(const std::string& address, const std::string& user, const std::string& password) :
-	DbConnectionCommon(address, user, password)
+
+DbConnectionMinmax::DbConnectionMinmax(
+		const std::string& address, const std::string& user, const std::string& password,
+		const std::string& pgAddress, const std::string& pgUser, const std::string& pgPassword) :
+	DbConnectionCommon(address, user, password),
+	_pqConnection{"host=" + pgAddress + " user=" + pgUser + " password=" + pgPassword + " dbname=meteodata"}
 {
 	DbConnectionMinmax::prepareStatements();
 }
@@ -65,330 +112,183 @@ void DbConnectionMinmax::prepareStatements()
 	prepareOneStatement(_selectValuesAfter18h, SELECT_VALUES_AFTER_18H_STMT);
 	prepareOneStatement(_selectYearlyValues, SELECT_YEARLY_VALUES_STMT);
 	prepareOneStatement(_insertDataPoint, INSERT_DATAPOINT_STMT);
+	_pqConnection.prepare(UPSERT_DATAPOINT_POSTGRESQL, UPSERT_DATAPOINT_POSTGRESQL_STMT);
+	_pqConnection.prepare(SELECT_YEARLY_VALUES_POSTGRESQL, SELECT_YEARLY_VALUES_POSTGRESQL_STMT);
+	_pqConnection.prepare(SELECT_VALUES_FROM_6H_TO_6H_POSTGRESQL, SELECT_VALUES_FROM_6H_TO_6H_POSTGRESQL_STMT);
+	_pqConnection.prepare(SELECT_VALUES_FROM_18H_TO_18H_POSTGRESQL, SELECT_VALUES_FROM_18H_TO_18H_POSTGRESQL_STMT);
+	_pqConnection.prepare(SELECT_VALUES_ALL_DAY_POSTGRESQL, SELECT_VALUES_ALL_DAY_POSTGRESQL_STMT);
 }
 
 bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_days& date, DbConnectionMinmax::Values& values)
 {
-	CassFuture* query;
-	CassStatement* statement = cass_prepared_bind(_selectValuesAfter6h.get());
-	cass_statement_bind_uuid(statement, 0, uuid);
-	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date));
-	auto morning = date + chrono::hours(6);
-	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(morning));
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
+	std::lock_guard{_pqTransactionMutex};
+	pqxx::work tx{_pqConnection};
 
-	std::pair<bool, float> insideTemp_max[2];
-	std::pair<bool, float> leafTemp_max[2][2];
-	std::pair<bool, float> outsideTemp_max[2];
-	std::pair<bool, float> real_outsideTemp_max[2];
-	std::pair<bool, float> soilTemp_max[2][4];
-	std::pair<bool, float> extraTemp_max[2][3];
-	std::pair<bool, float> rainfall[2];
-	std::pair<bool, float> rainrate_max[2];
+	try {
+		char u[CASS_UUID_STRING_LENGTH];
+		cass_uuid_string(uuid, u);
+		pqxx::row r = tx.exec_prepared1(SELECT_VALUES_FROM_6H_TO_6H_POSTGRESQL,
+			u,
+			date::format("%F %T%z", date)
+		);
 
-	const CassResult* result = cass_future_get_result(query);
-	bool ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result);
-		if (row) {
-			int param = 0;
-			storeCassandraFloat(row, param++, insideTemp_max[0]);
-			for (int i=0 ; i<2 ; i++)
-				storeCassandraFloat(row, param++,  leafTemp_max[0][i]);
-			storeCassandraFloat(row, param++, outsideTemp_max[0]);
-			storeCassandraFloat(row, param++, real_outsideTemp_max[0]);
-			for (int i=0 ; i<4 ; i++)
-				storeCassandraFloat(row, param++, soilTemp_max[0][i]);
-			for (int i=0 ; i<3 ; i++)
-				storeCassandraFloat(row, param++, extraTemp_max[0][i]);
-			storeCassandraFloat(row, param++, rainfall[0]);
-			storeCassandraFloat(row, param++, rainrate_max[0]);
-			ret = true;
-		}
+		values.insideTemp_max   = { !r[0].is_null(), r[0].as<float>(0.f) };
+		values.leafTemp_max[0]  = { !r[1].is_null(), r[1].as<float>(0.f) };
+		values.leafTemp_max[1]  = { !r[2].is_null(), r[2].as<float>(0.f) };
+		values.outsideTemp_max  = { !r[3].is_null(), r[3].as<float>(0.f) };
+		values.soilTemp_max[0]  = { !r[4].is_null(), r[4].as<float>(0.f) };
+		values.soilTemp_max[1]  = { !r[5].is_null(), r[5].as<float>(0.f) };
+		values.soilTemp_max[2]  = { !r[6].is_null(), r[6].as<float>(0.f) };
+		values.soilTemp_max[3]  = { !r[7].is_null(), r[7].as<float>(0.f) };
+		values.extraTemp_max[0] = { !r[8].is_null(), r[8].as<float>(0.f) };
+		values.extraTemp_max[1] = { !r[9].is_null(), r[9].as<float>(0.f) };
+		values.extraTemp_max[2] = { !r[10].is_null(), r[10].as<float>(0.f) };
+		values.rainfall         = { !r[11].is_null(), r[11].as<float>(0.f) };
+		values.rainrate_max     = { !r[12].is_null(), r[12].as<float>(0.f) };
+
+		tx.commit();
+		return true;
+	} catch (const pqxx::pqxx_exception& e) {
+		std::cerr << e.base().what() << std::endl;
+		return false;
 	}
-	cass_result_free(result);
-	cass_future_free(query);
-
-	auto nextDay = date + date::days(1);
-	if (nextDay > chrono::system_clock::now()) {
-		values.insideTemp_max = insideTemp_max[0];
-		for (int i=0 ; i<2 ; i++)
-			values.leafTemp_max[i] = leafTemp_max[0][i];
-		computeMax(values.outsideTemp_max, outsideTemp_max[0], real_outsideTemp_max[0]);
-		for (int i=0 ; i<2 ; i++)
-			values.soilTemp_max[i] = soilTemp_max[0][i];
-		for (int i=0 ; i<2 ; i++)
-			values.extraTemp_max[i] = extraTemp_max[0][i];
-		values.rainfall = rainfall[0];
-		values.rainrate_max = rainrate_max[0];
-
-		// return here immediately since there are no values for tomorrow
-		return ret;
-	}
-
-	statement = cass_prepared_bind(_selectValuesBefore6h.get());
-	cass_statement_bind_uuid(statement, 0, uuid);
-	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date + date::days(1)));
-	auto nextMorning = date + date::days(1) + chrono::hours(6);
-	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(nextMorning));
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
-
-	result = cass_future_get_result(query);
-	ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result);
-		if (row) {
-			int param = 0;
-			storeCassandraFloat(row, param++, insideTemp_max[1]);
-			for (int i=0 ; i<2 ; i++)
-				storeCassandraFloat(row, param++,  leafTemp_max[1][i]);
-			storeCassandraFloat(row, param++, outsideTemp_max[1]);
-			storeCassandraFloat(row, param++, real_outsideTemp_max[1]);
-			for (int i=0 ; i<4 ; i++)
-				storeCassandraFloat(row, param++, soilTemp_max[1][i]);
-			for (int i=0 ; i<3 ; i++)
-				storeCassandraFloat(row, param++, extraTemp_max[1][i]);
-			storeCassandraFloat(row, param++, rainfall[1]);
-			storeCassandraFloat(row, param++, rainrate_max[1]);
-			ret = true;
-		}
-	}
-
-	cass_result_free(result);
-	cass_future_free(query);
-
-	computeMax(values.insideTemp_max, insideTemp_max[0], insideTemp_max[1]);
-	for (int i=0 ; i<2 ; i++)
-		computeMax(values.leafTemp_max[i], leafTemp_max[0][i], leafTemp_max[1][i]);
-	computeMax(values.outsideTemp_max,
-			computeMax(outsideTemp_max[0], real_outsideTemp_max[0]),
-			computeMax(outsideTemp_max[1], real_outsideTemp_max[1])
-		  );
-	for (int i=0 ; i<2 ; i++)
-		computeMax(values.soilTemp_max[i], soilTemp_max[0][i], soilTemp_max[1][i]);
-	for (int i=0 ; i<2 ; i++)
-		computeMax(values.extraTemp_max[i], extraTemp_max[0][i], extraTemp_max[1][i]);
-	compute(values.rainfall, rainfall[0], rainfall[1], std::plus<float>());
-	computeMax(values.rainrate_max, rainrate_max[0], rainrate_max[1]);
-
-	return ret;
 }
 
 bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys_days& date, DbConnectionMinmax::Values& values)
 {
-	CassFuture* query;
-	CassStatement* statement = cass_prepared_bind(_selectValuesAfter18h.get());
-	cass_statement_bind_uuid(statement, 0, uuid);
-	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date - date::days(1)));
-	auto previousEvening = date - date::days(1) + chrono::hours(18);
-	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(previousEvening));
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
+	std::lock_guard{_pqTransactionMutex};
+	pqxx::work tx{_pqConnection};
 
-	std::pair<bool, float> insideTemp_min[2];
-	std::pair<bool, float> leafTemp_min[2][2];
-	std::pair<bool, float> outsideTemp_min[2];
-	std::pair<bool, float> real_outsideTemp_min[2];
-	std::pair<bool, float> soilTemp_min[2][4];
-	std::pair<bool, float> extraTemp_min[2][3];
-
-	const CassResult* result = cass_future_get_result(query);
-	bool ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result);
-		if (row) {
-			int param = 0;
-			storeCassandraFloat(row, param++, insideTemp_min[0]);
-			for (int i=0 ; i<2 ; i++)
-				storeCassandraFloat(row, param++,  leafTemp_min[0][i]);
-			storeCassandraFloat(row, param++, outsideTemp_min[0]);
-			storeCassandraFloat(row, param++, real_outsideTemp_min[0]);
-			for (int i=0 ; i<4 ; i++)
-				storeCassandraFloat(row, param++, soilTemp_min[0][i]);
-			for (int i=0 ; i<3 ; i++)
-				storeCassandraFloat(row, param++, extraTemp_min[0][i]);
-			ret = true;
-		}
-	}
-	cass_result_free(result);
-	cass_future_free(query);
-
-	statement = cass_prepared_bind(_selectValuesBefore18h.get());
-	cass_statement_bind_uuid(statement, 0, uuid);
-	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date));
-	auto evening = date + chrono::hours(18);
-	cass_statement_bind_int64(statement, 2, from_systime_to_CassandraDateTime(evening));
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
-
-	result = cass_future_get_result(query);
-	ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result);
-		if (row) {
-			int param = 0;
-			storeCassandraFloat(row, param++, insideTemp_min[1]);
-			for (int i=0 ; i<2 ; i++)
-				storeCassandraFloat(row, param++,  leafTemp_min[1][i]);
-			storeCassandraFloat(row, param++, outsideTemp_min[1]);
-			storeCassandraFloat(row, param++, real_outsideTemp_min[1]);
-			for (int i=0 ; i<4 ; i++)
-				storeCassandraFloat(row, param++, soilTemp_min[1][i]);
-			for (int i=0 ; i<3 ; i++)
-				storeCassandraFloat(row, param++, extraTemp_min[1][i]);
-			ret = true;
-		}
-	}
-
-	cass_result_free(result);
-	cass_future_free(query);
-
-	computeMin(values.insideTemp_min, insideTemp_min[0], insideTemp_min[1]);
-	for (int i=0 ; i<2 ; i++)
-		computeMin(values.leafTemp_min[i], leafTemp_min[0][i], leafTemp_min[1][i]);
-	computeMin(values.outsideTemp_min,
-			computeMin(outsideTemp_min[0], real_outsideTemp_min[0]),
-			computeMin(outsideTemp_min[1], real_outsideTemp_min[1])
+	try {
+		char u[CASS_UUID_STRING_LENGTH];
+		cass_uuid_string(uuid, u);
+		pqxx::row r = tx.exec_prepared1(SELECT_VALUES_FROM_18H_TO_18H_POSTGRESQL,
+			u,
+			date::format("%F %T%z", date)
 		);
-	for (int i=0 ; i<2 ; i++)
-		computeMin(values.soilTemp_min[i], soilTemp_min[0][i], soilTemp_min[1][i]);
-	for (int i=0 ; i<2 ; i++)
-		computeMin(values.extraTemp_min[i], extraTemp_min[0][i], extraTemp_min[1][i]);
 
-	return ret;
+		values.insideTemp_min   = { !r[0].is_null(), r[0].as<float>(0.f) };
+		values.leafTemp_min[0]  = { !r[1].is_null(), r[1].as<float>(0.f) };
+		values.leafTemp_min[1]  = { !r[2].is_null(), r[2].as<float>(0.f) };
+		values.outsideTemp_min  = { !r[3].is_null(), r[3].as<float>(0.f) };
+		values.soilTemp_min[0]  = { !r[4].is_null(), r[4].as<float>(0.f) };
+		values.soilTemp_min[1]  = { !r[5].is_null(), r[5].as<float>(0.f) };
+		values.soilTemp_min[2]  = { !r[6].is_null(), r[6].as<float>(0.f) };
+		values.soilTemp_min[3]  = { !r[7].is_null(), r[7].as<float>(0.f) };
+		values.extraTemp_min[0] = { !r[8].is_null(), r[8].as<float>(0.f) };
+		values.extraTemp_min[1] = { !r[9].is_null(), r[9].as<float>(0.f) };
+		values.extraTemp_min[2] = { !r[10].is_null(), r[10].as<float>(0.f) };
+
+		tx.commit();
+		return true;
+	} catch (const pqxx::pqxx_exception& e) {
+		std::cerr << e.base().what() << std::endl;
+		return false;
+	}
 }
 
 bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_days& date, DbConnectionMinmax::Values& values)
 {
-	CassFuture* query;
-	CassStatement* statement = cass_prepared_bind(_selectValuesAllDay.get());
-	cass_statement_bind_uuid(statement, 0, uuid);
-//	cass_statement_bind_int64(statement, 1, date::sys_time<chrono::milliseconds>(date).time_since_epoch().count());
-//	cass_statement_bind_int64(statement, 2, date::sys_time<chrono::milliseconds>(date + date::days(1)).time_since_epoch().count());
-	cass_statement_bind_uint32(statement, 1, from_sysdays_to_CassandraDate(date));
-//	bindCassandraInt(statement, 2, (date + date::days(1)).time_since_epoch().count());
-//	date::sys_time<chrono::milliseconds> previousEvening = date - date::days(1) + chrono::hours(18);
-//	date::sys_time<chrono::milliseconds> evening         = date + chrono::hours(18);
-//	cass_statement_bind_int64(statement, 3, previousEvening.time_since_epoch().count());
-//	cass_statement_bind_int64(statement, 4, evening.time_since_epoch().count());
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
+	std::lock_guard{_pqTransactionMutex};
+	pqxx::work tx{_pqConnection};
 
-	const CassResult* result = cass_future_get_result(query);
-	bool ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result);
-		if (row) {
-			int res = 0;
-			storeCassandraFloat(row, res++, values.barometer_min);
-			storeCassandraFloat(row, res++, values.barometer_max);
-			storeCassandraFloat(row, res++, values.barometer_avg);
-			for (int i=0 ; i<2 ; i++) {
-				storeCassandraInt(row, res++, values.leafWetnesses_min[i]);
-				storeCassandraInt(row, res++, values.leafWetnesses_max[i]);
-				storeCassandraInt(row, res++, values.leafWetnesses_avg[i]);
-			}
-			for (int i=0 ; i<4 ; i++) {
-				storeCassandraInt(row, res++, values.soilMoistures_min[i]);
-				storeCassandraInt(row, res++, values.soilMoistures_max[i]);
-				storeCassandraInt(row, res++, values.soilMoistures_avg[i]);
-			}
-			storeCassandraInt(row, res++, values.insideHum_min);
-			storeCassandraInt(row, res++, values.insideHum_max);
-			storeCassandraInt(row, res++, values.insideHum_avg);
-			storeCassandraInt(row, res++, values.outsideHum_min);
-			storeCassandraInt(row, res++, values.outsideHum_max);
-			storeCassandraInt(row, res++, values.outsideHum_avg);
-			for (int i=0 ; i<2 ; i++) {
-				storeCassandraInt(row, res++, values.extraHum_min[i]);
-				storeCassandraInt(row, res++, values.extraHum_max[i]);
-				storeCassandraInt(row, res++, values.extraHum_avg[i]);
-			}
-			storeCassandraInt(row, res++, values.solarRad_max);
-			storeCassandraInt(row, res++, values.solarRad_avg);
-			storeCassandraInt(row, res++, values.uv_max);
-			storeCassandraInt(row, res++, values.uv_avg);
-			storeCassandraFloat(row, res++, values.windgust_max);
-			storeCassandraFloat(row, res++, values.windgust_avg);
-			storeCassandraFloat(row, res++, values.windspeed_max);
-			storeCassandraFloat(row, res++, values.windspeed_avg);
-			storeCassandraFloat(row, res++, values.dewpoint_min);
-			storeCassandraFloat(row, res++, values.dewpoint_max);
-			storeCassandraFloat(row, res++, values.dewpoint_avg);
-			storeCassandraFloat(row, res++, values.et);
-			storeCassandraInt(row, res++, values.insolation_time);
+	try {
+		char u[CASS_UUID_STRING_LENGTH];
+		cass_uuid_string(uuid, u);
+		pqxx::row r = tx.exec_prepared1(SELECT_VALUES_ALL_DAY_POSTGRESQL,
+			u,
+			date::format("%F %T%z", date)
+		);
 
-			// Overwrite rainfall and insolation_time if cumulative values are available
-			const CassValue* raw = cass_row_get_column(row, res++);
-			if (!cass_value_is_null(raw)) {
-				values.rainfall.first = true;
-				cass_value_get_float(raw, &values.rainfall.second);
-			}
-			raw = cass_row_get_column(row, res++);
-			if (!cass_value_is_null(raw)) {
-				values.insolation_time.first = true;
-				cass_value_get_int32(raw, &values.insolation_time.second);
-			}
-
-			// Overwrite Tx and Tn if true values are available
-			// Check also that the new value is indeed greater (resp. lower)
-			// than then the computed max (resp. min), in case the station
-			// measures the min-max in a mignight-to-midnight window
-			raw = cass_row_get_column(row, res++);
-			if (!cass_value_is_null(raw)) {
-				float newMax;
-				cass_value_get_float(raw, &newMax);
-				if (!values.outsideTemp_max.first || values.outsideTemp_max.second < newMax) {
-					values.outsideTemp_max.first = true;
-					values.outsideTemp_max.second = newMax;
-				}
-			}
-			raw = cass_row_get_column(row, res++);
-			if (!cass_value_is_null(raw)) {
-				float newMin;
-				cass_value_get_float(raw, &newMin);
-				if (!values.outsideTemp_min.first || values.outsideTemp_min.second > newMin) {
-					values.outsideTemp_min.first = true;
-					values.outsideTemp_min.second = newMin;
-				}
-			}
-
-			ret = true;
+		values.barometer_min   = { !r[0].is_null(), r[0].as<float>(0.f) };
+		values.barometer_max  = { !r[1].is_null(), r[1].as<float>(0.f) };
+		values.barometer_avg  = { !r[2].is_null(), r[2].as<float>(0.f) };
+		values.leafWetnesses_min[0]  = { !r[3].is_null(), r[3].as<float>(0.f) };
+		values.leafWetnesses_max[0]  = { !r[4].is_null(), r[4].as<float>(0.f) };
+		values.leafWetnesses_avg[0]  = { !r[5].is_null(), r[5].as<float>(0.f) };
+		values.leafWetnesses_min[1]  = { !r[6].is_null(), r[6].as<float>(0.f) };
+		values.leafWetnesses_max[1]  = { !r[7].is_null(), r[7].as<float>(0.f) };
+		values.leafWetnesses_avg[1]  = { !r[8].is_null(), r[8].as<float>(0.f) };
+		values.soilMoistures_min[0]  = { !r[9].is_null(), r[9].as<float>(0.f) };
+		values.soilMoistures_max[0]  = { !r[10].is_null(), r[10].as<float>(0.f) };
+		values.soilMoistures_avg[0]  = { !r[11].is_null(), r[11].as<float>(0.f) };
+		values.soilMoistures_min[1]  = { !r[12].is_null(), r[12].as<float>(0.f) };
+		values.soilMoistures_max[1]  = { !r[13].is_null(), r[13].as<float>(0.f) };
+		values.soilMoistures_avg[1]  = { !r[14].is_null(), r[14].as<float>(0.f) };
+		values.soilMoistures_min[2]  = { !r[15].is_null(), r[15].as<float>(0.f) };
+		values.soilMoistures_max[2]  = { !r[16].is_null(), r[16].as<float>(0.f) };
+		values.soilMoistures_avg[2]  = { !r[17].is_null(), r[17].as<float>(0.f) };
+		values.soilMoistures_min[3]  = { !r[18].is_null(), r[18].as<float>(0.f) };
+		values.soilMoistures_max[3]  = { !r[19].is_null(), r[19].as<float>(0.f) };
+		values.soilMoistures_avg[3]  = { !r[20].is_null(), r[20].as<float>(0.f) };
+		values.insideHum_min  = { !r[21].is_null(), r[21].as<float>(0.f) };
+		values.insideHum_max  = { !r[22].is_null(), r[22].as<float>(0.f) };
+		values.insideHum_avg  = { !r[23].is_null(), r[23].as<float>(0.f) };
+		values.outsideHum_min  = { !r[24].is_null(), r[24].as<float>(0.f) };
+		values.outsideHum_max  = { !r[25].is_null(), r[25].as<float>(0.f) };
+		values.outsideHum_avg  = { !r[26].is_null(), r[26].as<float>(0.f) };
+		values.extraHum_min[0]  = { !r[27].is_null(), r[27].as<float>(0.f) };
+		values.extraHum_max[0]  = { !r[28].is_null(), r[28].as<float>(0.f) };
+		values.extraHum_avg[0]  = { !r[29].is_null(), r[29].as<float>(0.f) };
+		values.extraHum_min[1]  = { !r[30].is_null(), r[30].as<float>(0.f) };
+		values.extraHum_max[1]  = { !r[31].is_null(), r[31].as<float>(0.f) };
+		values.extraHum_avg[1]  = { !r[32].is_null(), r[32].as<float>(0.f) };
+		values.solarRad_max  = { !r[33].is_null(), r[33].as<float>(0.f) };
+		values.solarRad_avg  = { !r[34].is_null(), r[34].as<float>(0.f) };
+		values.uv_max  = { !r[35].is_null(), r[35].as<float>(0.f) };
+		values.uv_avg  = { !r[36].is_null(), r[36].as<float>(0.f) };
+		values.windgust_max  = { !r[37].is_null(), r[37].as<float>(0.f) };
+		values.windgust_avg  = { !r[38].is_null(), r[38].as<float>(0.f) };
+		values.windspeed_max  = { !r[39].is_null(), r[39].as<float>(0.f) };
+		values.windspeed_avg  = { !r[40].is_null(), r[40].as<float>(0.f) };
+		values.dewpoint_min  = { !r[41].is_null(), r[41].as<float>(0.f) };
+		values.dewpoint_max  = { !r[42].is_null(), r[42].as<float>(0.f) };
+		values.dewpoint_avg  = { !r[43].is_null(), r[43].as<float>(0.f) };
+		values.et  = { !r[44].is_null(), r[44].as<float>(0.f) };
+		values.insolation_time  = { !r[45].is_null(), r[45].as<float>(0.f) };
+		if (!r[46].is_null() && (!values.rainfall.first || values.rainfall.second < r[46].as<float>(0.0f))) {
+			values.rainfall  = { true, r[46].as<float>(0.f) };
 		}
-	}
-	cass_result_free(result);
-	cass_future_free(query);
+		if (!r[47].is_null() && (!values.insolation_time.first || values.insolation_time.second < r[47].as<float>(0.0f))) {
+			values.insolation_time  = { true, r[47].as<float>(0.f) };
+		}
+		if (!r[48].is_null() && (!values.outsideTemp_max.first || values.outsideTemp_max.second < r[48].as<float>(0.0f))) {
+			values.outsideTemp_max  = { true, r[48].as<float>(0.f) };
+		}
+		if (!r[49].is_null() && (!values.outsideTemp_min.first || values.outsideTemp_min.second < r[49].as<float>(0.0f))) {
+			values.outsideTemp_min  = { true, r[49].as<float>(0.f) };
+		}
 
-	return ret;
+		tx.commit();
+		return true;
+	} catch (const pqxx::pqxx_exception& e) {
+		std::cerr << e.base().what() << std::endl;
+		return false;
+	}
 }
 
 bool DbConnectionMinmax::getYearlyValues(const CassUuid& uuid, const date::sys_days& date, std::pair<bool, float>& rain, std::pair<bool, float>& et)
 {
-	CassFuture* query;
-	CassStatement* statement = cass_prepared_bind(_selectYearlyValues.get());
-	cass_statement_bind_uuid(statement, 0, uuid);
-	year_month_day ymd{date};
-	cass_statement_bind_int32(statement, 1, int(ymd.year()) * 100 + unsigned(ymd.month()));
-	cass_statement_bind_uint32(statement, 2,from_sysdays_to_CassandraDate(date));
-	query = cass_session_execute(_session.get(), statement);
-	cass_statement_free(statement);
+	std::lock_guard{_pqTransactionMutex};
+	pqxx::work tx{_pqConnection};
 
-	const CassResult* result = cass_future_get_result(query);
-	bool ret = false;
-	if (result) {
-		const CassRow* row = cass_result_first_row(result);
-		if (row) {
-			storeCassandraFloat(row, 0, rain);
-			storeCassandraFloat(row, 1, et);
-			ret = true;
-		}
+	try {
+		char u[CASS_UUID_STRING_LENGTH];
+		cass_uuid_string(uuid, u);
+		pqxx::row r = tx.exec_prepared1(SELECT_YEARLY_VALUES_POSTGRESQL,
+			u,
+			date::format("%F", date)
+		);
+
+		rain = { !r[0].is_null(), r[0].as<float>(0.f) };
+		et   = { !r[1].is_null(), r[1].as<float>(0.f) };
+
+		tx.commit();
+		return true;
+	} catch (const pqxx::pqxx_exception& e) {
+		std::cerr << e.base().what() << std::endl;
+		return false;
 	}
-	cass_result_free(result);
-	cass_future_free(query);
-
-	return ret;
 }
 
 bool DbConnectionMinmax::insertDataPoint(const CassUuid& station, const date::sys_days& date, const Values& values)
@@ -480,4 +380,114 @@ bool DbConnectionMinmax::insertDataPoint(const CassUuid& station, const date::sy
 
 	return ret;
 }
+
+bool DbConnectionMinmax::insertDataPointInTimescaleDB(const CassUuid& station, const date::sys_days& date, const Values& values)
+{
+	std::lock_guard<std::mutex> mutexed{_pqTransactionMutex};
+	pqxx::work tx{_pqConnection};
+	try {
+		doInsertDataPointInTimescaleDB(station, date, values, tx);
+		tx.commit();
+	} catch (const pqxx::pqxx_exception& e) {
+		std::cerr << e.base().what() << std::endl;
+		return false;
+	}
+	return true;
+}
+
+void DbConnectionMinmax::doInsertDataPointInTimescaleDB(const CassUuid& station, const date::sys_days& date, const Values& values, pqxx::transaction_base& tx)
+{
+	char uuid[CASS_UUID_STRING_LENGTH];
+	cass_uuid_string(station, uuid);
+	tx.exec_prepared0(UPSERT_DATAPOINT_POSTGRESQL,
+		uuid,
+		date::format("%F", date),
+		values.barometer_min.first ? &values.barometer_min.second : nullptr,
+		values.barometer_max.first ? &values.barometer_max.second : nullptr,
+		values.barometer_avg.first ? &values.barometer_avg.second : nullptr,
+		values.dayEt.first ? &values.dayEt.second : nullptr,
+		values.monthEt.first ? &values.monthEt.second : nullptr,
+		values.yearEt.first ? &values.yearEt.second : nullptr,
+		values.dayRain.first ? &values.dayRain.second : nullptr,
+		values.monthRain.first ? &values.monthRain.second : nullptr,
+		values.yearRain.first ? &values.yearRain.second : nullptr,
+		values.dewpoint_min.first ? &values.dewpoint_max.second : nullptr,
+		values.dewpoint_avg.first ? &values.dewpoint_avg.second : nullptr,
+		values.insideHum_min.first ? &values.insideHum_min.second : nullptr,
+		values.insideHum_max.first ? &values.insideHum_max.second : nullptr,
+		values.insideHum_avg.first ? &values.insideHum_avg.second : nullptr,
+		values.insideTemp_min.first ? &values.insideTemp_min.second : nullptr,
+		values.insideTemp_max.first ? &values.insideTemp_max.second : nullptr,
+		values.insideTemp_avg.first ? &values.insideTemp_avg.second : nullptr,
+		values.leafTemp_min[0].first ? &values.leafTemp_min[0].second : nullptr,
+		values.leafTemp_max[0].first ? &values.leafTemp_max[0].second : nullptr,
+		values.leafTemp_avg[0].first ? &values.leafTemp_avg[0].second : nullptr,
+		values.leafTemp_min[1].first ? &values.leafTemp_min[1].second : nullptr,
+		values.leafTemp_max[1].first ? &values.leafTemp_max[1].second : nullptr,
+		values.leafTemp_avg[1].first ? &values.leafTemp_avg[1].second : nullptr,
+		values.leafWetnesses_min[0].first ? &values.leafWetnesses_min[0].second : nullptr,
+		values.leafWetnesses_max[0].first ? &values.leafWetnesses_max[0].second : nullptr,
+		values.leafWetnesses_avg[0].first ? &values.leafWetnesses_avg[0].second : nullptr,
+		values.leafWetnesses_min[1].first ? &values.leafWetnesses_min[1].second : nullptr,
+		values.leafWetnesses_max[1].first ? &values.leafWetnesses_max[1].second : nullptr,
+		values.leafWetnesses_avg[1].first ? &values.leafWetnesses_avg[1].second : nullptr,
+		values.outsideHum_min.first ? &values.outsideHum_min.second : nullptr,
+		values.outsideHum_max.first ? &values.outsideHum_max.second : nullptr,
+		values.outsideHum_avg.first ? &values.outsideHum_avg.second : nullptr,
+		values.outsideTemp_min.first ? &values.outsideTemp_min.second : nullptr,
+		values.outsideTemp_max.first ? &values.outsideTemp_max.second : nullptr,
+		values.outsideTemp_avg.first ? &values.outsideTemp_avg.second : nullptr,
+		values.rainrate_max.first ? &values.rainrate_max.second : nullptr,
+		values.soilMoistures_min[0].first ? &values.soilMoistures_min[0].second : nullptr,
+		values.soilMoistures_max[0].first ? &values.soilMoistures_max[0].second : nullptr,
+		values.soilMoistures_avg[0].first ? &values.soilMoistures_avg[0].second : nullptr,
+		values.soilMoistures_min[1].first ? &values.soilMoistures_min[1].second : nullptr,
+		values.soilMoistures_max[1].first ? &values.soilMoistures_max[1].second : nullptr,
+		values.soilMoistures_avg[1].first ? &values.soilMoistures_avg[1].second : nullptr,
+		values.soilMoistures_min[2].first ? &values.soilMoistures_min[2].second : nullptr,
+		values.soilMoistures_max[2].first ? &values.soilMoistures_max[2].second : nullptr,
+		values.soilMoistures_avg[2].first ? &values.soilMoistures_avg[2].second : nullptr,
+		values.soilMoistures_min[3].first ? &values.soilMoistures_min[3].second : nullptr,
+		values.soilMoistures_max[3].first ? &values.soilMoistures_max[3].second : nullptr,
+		values.soilMoistures_avg[3].first ? &values.soilMoistures_avg[3].second : nullptr,
+		values.soilTemp_min[0].first ? &values.soilTemp_min[0].second : nullptr,
+		values.soilTemp_max[0].first ? &values.soilTemp_max[0].second : nullptr,
+		values.soilTemp_avg[0].first ? &values.soilTemp_avg[0].second : nullptr,
+		values.soilTemp_min[1].first ? &values.soilTemp_min[1].second : nullptr,
+		values.soilTemp_max[1].first ? &values.soilTemp_max[1].second : nullptr,
+		values.soilTemp_avg[1].first ? &values.soilTemp_avg[1].second : nullptr,
+		values.soilTemp_min[2].first ? &values.soilTemp_min[2].second : nullptr,
+		values.soilTemp_max[2].first ? &values.soilTemp_max[2].second : nullptr,
+		values.soilTemp_avg[2].first ? &values.soilTemp_avg[2].second : nullptr,
+		values.soilTemp_min[3].first ? &values.soilTemp_min[3].second : nullptr,
+		values.soilTemp_max[3].first ? &values.soilTemp_max[3].second : nullptr,
+		values.soilTemp_avg[3].first ? &values.soilTemp_avg[3].second : nullptr,
+		values.extraTemp_min[0].first ? &values.extraTemp_min[0].second : nullptr,
+		values.extraTemp_max[0].first ? &values.extraTemp_max[0].second : nullptr,
+		values.extraTemp_avg[0].first ? &values.extraTemp_avg[0].second : nullptr,
+		values.extraTemp_min[1].first ? &values.extraTemp_min[1].second : nullptr,
+		values.extraTemp_max[1].first ? &values.extraTemp_max[1].second : nullptr,
+		values.extraTemp_avg[1].first ? &values.extraTemp_avg[1].second : nullptr,
+		values.extraTemp_min[2].first ? &values.extraTemp_min[2].second : nullptr,
+		values.extraTemp_max[2].first ? &values.extraTemp_max[2].second : nullptr,
+		values.extraTemp_avg[2].first ? &values.extraTemp_avg[2].second : nullptr,
+		values.extraHum_min[0].first ? &values.extraHum_min[0].second : nullptr,
+		values.extraHum_max[0].first ? &values.extraHum_max[0].second : nullptr,
+		values.extraHum_avg[0].first ? &values.extraHum_avg[0].second : nullptr,
+		values.extraHum_min[1].first ? &values.extraHum_min[1].second : nullptr,
+		values.extraHum_max[1].first ? &values.extraHum_max[1].second : nullptr,
+		values.extraHum_avg[1].first ? &values.extraHum_avg[1].second : nullptr,
+		values.solarRad_max.first ? &values.solarRad_max.second : nullptr,
+		values.solarRad_avg.first ? &values.solarRad_avg.second : nullptr,
+		values.uv_max.first ? &values.uv_max.second : nullptr,
+		values.uv_avg.first ? &values.uv_avg.second : nullptr,
+		values.winddir.first ? &values.winddir.second : nullptr,
+		values.windgust_max.first ? &values.windgust_max.second : nullptr,
+		values.windgust_avg.first ? &values.windgust_avg.second : nullptr,
+		values.windspeed_max.first ? &values.windspeed_max.second : nullptr,
+		values.windspeed_avg.first ? &values.windspeed_avg.second : nullptr,
+		values.insolation_time.first ? &values.insolation_time.second : nullptr
+	);
+}
+
 }

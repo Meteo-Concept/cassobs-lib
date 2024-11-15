@@ -37,9 +37,12 @@ using namespace date;
  */
 int main()
 {
-	std::string dataAddress{std::getenv("CASSANDRA_HOST")};
-	std::string dataUser{std::getenv("CASSANDRA_USER")};
-	std::string dataPassword{std::getenv("CASSANDRA_PASSWORD")};
+	std::string dataAddress{std::getenv("CASSANDRA_HOST") ?: "127.0.0.1"};
+	std::string dataUser{std::getenv("CASSANDRA_USER") ?: ""};
+	std::string dataPassword{std::getenv("CASSANDRA_PASSWORD") ?: ""};
+	std::string pqAddress{std::getenv("POSTGRES_HOST") ?: "127.0.0.1"};
+	std::string pqUser{std::getenv("POSTGRES_USER") ?: ""};
+	std::string pqPassword{std::getenv("POSTGRES_PASSWORD") ?: ""};
 
 	cass_log_set_level(CASS_LOG_INFO);
 	CassLogCallback logCallback =
@@ -55,22 +58,49 @@ int main()
 		};
 	cass_log_set_callback(logCallback, NULL);
 
-	DbConnectionMinmax db(dataAddress, dataUser, dataPassword);
+	DbConnectionMinmax db(dataAddress, dataUser, dataPassword, pqAddress, pqUser, pqPassword);
 	DbConnectionMinmax::Values values;
 	CassUuid uuid;
+
+	sys_days target{2024_y/11/10};
+
 	cass_uuid_from_string("8217b396-2735-4de4-946b-fad1d8857d1b", &uuid);
-	if (db.getValues6hTo6h(uuid, sys_days{2019_y/3/9}, values))
-		std::cout << "Between 2019-03-09 at 6h UTC and 2019-03-10 at 6h UTC: " << "Tx=" << values.outsideTemp_max.second << "°C ; RR=" << values.rainfall.second << "mm" << std::endl;
-	else
-		std::cout << "Getting the minmax between 2019-03-09 at 6h UTC and 2019-03-10 at 6h UTC failed" << std::endl;
+	if (db.getValues6hTo6h(uuid, target, values)) {
+		std::cout << "Between " << format("%Y-%m-%d at %Hh UTC", target + 6h)
+			  << " and "    << format("%Y-%m-%d at %Hh UTC", target + 30h) << ": ";
+		if (values.outsideTemp_max.first) {
+			std::cout << "Tx=" << values.outsideTemp_max.second << "°C\n";
+		} else {
+			std::cout << "Tx is null\n";
+		}
+	} else {
+		std::cout << "Getting the minmax failed" << std::endl;
+		return 1;
+	}
 
-	if (db.getValues18hTo18h(uuid, sys_days{2019_y/3/9}, values))
-		std::cout << "Between 2019-03-08 at 18h UTC and 2019-03-09 at 18h UTC: " << "Tn=" << values.outsideTemp_min.second << "°C" << std::endl;
-	else
-		std::cout << "Getting the minmax between 2019-03-08 at 18h UTC and 2019-03-09 at 18h UTC failed" << std::endl;
+	if (db.getValues18hTo18h(uuid, target, values)) {
+		std::cout << "Between " << format("%Y-%m-%d at %Hh UTC", target - 6h)
+			  << " and "    << format("%Y-%m-%d at %Hh UTC", target + 18h) << ": ";
+		if (values.outsideTemp_min.first) {
+			std::cout << "Tn=" << values.outsideTemp_min.second << "°C\n";
+		} else {
+			std::cout << "Tn is null\n";
+		}
+	} else {
+		std::cout << "Getting the minmax failed" << std::endl;
+		return 1;
+	}
 
-	if (db.getValues0hTo0h(uuid, sys_days{2019_y/3/9}, values))
-		std::cout << "Between 2019-03-09 at 0h UTC and 2019-03-10 at 0h UTC: " << "wind=" << values.windspeed_avg.second << "km/h ; gust=" << values.windgust_max.second << "km/h" << std::endl;
-	else
-		std::cout << "Getting the minmax between 2019-03-09 at 0h UTC and 2019-03-10 at 0h UTC failed" << std::endl;
+	if (db.getValues0hTo0h(uuid, target, values)) {
+		std::cout << "Between " << format("%Y-%m-%d at %Hh UTC", target)
+			  << " and "    << format("%Y-%m-%d at %Hh UTC", target + 24h) << ": ";
+		if (values.windgust_max.first) {
+			std::cout << "gust=" << values.windgust_max.second << "km/h\n";
+		} else {
+			std::cout << "gust is null\n";
+		}
+	} else {
+		std::cout << "Getting the minmax failed" << std::endl;
+		return 1;
+	}
 }

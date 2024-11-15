@@ -1173,8 +1173,11 @@ namespace meteodata {
 		return true;
 	}
 
-	void DbConnectionObservations::doInsertV2DataPointInTimescaleDB(const Observation& obs, pqxx::transaction_base& tx)
+	void DbConnectionObservations::doInsertV2DataPointInTimescaleDB(const Observation& orig, pqxx::transaction_base& tx)
 	{
+		Observation obs{orig};
+		obs.filterOutImpossibleValues();
+
 		char uuid[CASS_UUID_STRING_LENGTH];
 		cass_uuid_string(obs.station, uuid);
 		tx.exec_prepared0(UPSERT_OBSERVATION,

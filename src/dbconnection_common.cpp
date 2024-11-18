@@ -27,14 +27,53 @@
 #include <chrono>
 #include <unordered_map>
 #include <functional>
+#include <vector>
+#include <cstring>
 
 #include <cassandra.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <pqxx/strconv>
 
 #include "dbconnection_common.h"
 
 using namespace date;
+
+void pqxx::string_traits<std::vector<int>, void>::from_string(const char str[], std::vector<int>& obj)
+{
+	if (str[0] != '{') {
+		throw std::runtime_error("Array format error");
+	}
+	std::string s{str, ::strlen(str)};
+	std::istringstream is{s};
+	int next = '{';
+	while (is && next != '}' && next != ',') {
+		int n;
+		is >> n;
+		if (is) {
+			obj.push_back(n);
+			next = is.get();
+		}
+	}
+	if (next != '}') {
+		throw std::runtime_error("Array format error");
+	}
+}
+
+std::string pqxx::string_traits<std::vector<int>, void>::to_string(std::vector<int> obj)
+{
+	std::ostringstream os;
+	os << "{";
+	auto it = obj.begin();
+	if (it != obj.end()) {
+		os << *it;
+	}
+	while (it != obj.end()) {
+		os << "," << (*it);
+	}
+	os << "}";
+	return os.str();
+}
 
 namespace meteodata {
 

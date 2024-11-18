@@ -40,55 +40,24 @@
 
 using namespace date;
 
-void pqxx::string_traits<std::vector<int>, void>::from_string(const char str[], std::vector<int>& obj)
-{
-	if (str[0] != '{') {
-		throw std::runtime_error("Array format error");
-	}
-	std::string s{str, ::strlen(str)};
-	std::istringstream is{s};
-	int next = '{';
-	while (is && next != '}' && next != ',') {
-		int n;
-		is >> n;
-		if (is) {
-			obj.push_back(n);
-			next = is.get();
-		}
-	}
-	if (next != '}') {
-		throw std::runtime_error("Array format error");
-	}
-}
-
-std::string pqxx::string_traits<std::vector<int>, void>::to_string(std::vector<int> obj)
-{
-	std::ostringstream os;
-	os << "{";
-	auto it = obj.begin();
-	if (it != obj.end()) {
-		os << *it;
-	}
-	while (it != obj.end()) {
-		os << "," << (*it);
-	}
-	os << "}";
-	return os.str();
-}
-
 namespace meteodata {
 
 constexpr char DbConnectionMinmax::INSERT_DATAPOINT_STMT[];
+constexpr char DbConnectionMinmax::UPSERT_DATAPOINT_POSTGRESQL[];
 constexpr char DbConnectionMinmax::UPSERT_DATAPOINT_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_ALL_DAY_STMT[];
+constexpr char DbConnectionMinmax::SELECT_VALUES_ALL_DAY_POSTGRESQL[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_ALL_DAY_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_BEFORE_6H_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_AFTER_6H_STMT[];
+constexpr char DbConnectionMinmax::SELECT_VALUES_FROM_6H_TO_6H_POSTGRESQL[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_FROM_6H_TO_6H_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_BEFORE_18H_STMT[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_AFTER_18H_STMT[];
+constexpr char DbConnectionMinmax::SELECT_VALUES_FROM_18H_TO_18H_POSTGRESQL[];
 constexpr char DbConnectionMinmax::SELECT_VALUES_FROM_18H_TO_18H_POSTGRESQL_STMT[];
 constexpr char DbConnectionMinmax::SELECT_YEARLY_VALUES_STMT[];
+constexpr char DbConnectionMinmax::SELECT_YEARLY_VALUES_POSTGRESQL[];
 constexpr char DbConnectionMinmax::SELECT_YEARLY_VALUES_POSTGRESQL_STMT[];
 
 namespace chrono = std::chrono;
@@ -121,7 +90,7 @@ void DbConnectionMinmax::prepareStatements()
 
 bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_days& date, DbConnectionMinmax::Values& values)
 {
-	std::lock_guard{_pqTransactionMutex};
+	std::lock_guard locked{_pqTransactionMutex};
 	pqxx::work tx{_pqConnection};
 
 	try {
@@ -156,7 +125,7 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 
 bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys_days& date, DbConnectionMinmax::Values& values)
 {
-	std::lock_guard{_pqTransactionMutex};
+	std::lock_guard locked{_pqTransactionMutex};
 	pqxx::work tx{_pqConnection};
 
 	try {
@@ -189,7 +158,7 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 
 bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_days& date, DbConnectionMinmax::Values& values)
 {
-	std::lock_guard{_pqTransactionMutex};
+	std::lock_guard locked{_pqTransactionMutex};
 	pqxx::work tx{_pqConnection};
 
 	try {
@@ -200,52 +169,52 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 			date::format("%F %T%z", date)
 		);
 
-		values.barometer_min   = { !r[0].is_null(), r[0].as<float>(0.f) };
-		values.barometer_max  = { !r[1].is_null(), r[1].as<float>(0.f) };
-		values.barometer_avg  = { !r[2].is_null(), r[2].as<float>(0.f) };
-		values.leafWetnesses_min[0]  = { !r[3].is_null(), r[3].as<float>(0.f) };
-		values.leafWetnesses_max[0]  = { !r[4].is_null(), r[4].as<float>(0.f) };
-		values.leafWetnesses_avg[0]  = { !r[5].is_null(), r[5].as<float>(0.f) };
-		values.leafWetnesses_min[1]  = { !r[6].is_null(), r[6].as<float>(0.f) };
-		values.leafWetnesses_max[1]  = { !r[7].is_null(), r[7].as<float>(0.f) };
-		values.leafWetnesses_avg[1]  = { !r[8].is_null(), r[8].as<float>(0.f) };
-		values.soilMoistures_min[0]  = { !r[9].is_null(), r[9].as<float>(0.f) };
-		values.soilMoistures_max[0]  = { !r[10].is_null(), r[10].as<float>(0.f) };
-		values.soilMoistures_avg[0]  = { !r[11].is_null(), r[11].as<float>(0.f) };
-		values.soilMoistures_min[1]  = { !r[12].is_null(), r[12].as<float>(0.f) };
-		values.soilMoistures_max[1]  = { !r[13].is_null(), r[13].as<float>(0.f) };
-		values.soilMoistures_avg[1]  = { !r[14].is_null(), r[14].as<float>(0.f) };
-		values.soilMoistures_min[2]  = { !r[15].is_null(), r[15].as<float>(0.f) };
-		values.soilMoistures_max[2]  = { !r[16].is_null(), r[16].as<float>(0.f) };
-		values.soilMoistures_avg[2]  = { !r[17].is_null(), r[17].as<float>(0.f) };
-		values.soilMoistures_min[3]  = { !r[18].is_null(), r[18].as<float>(0.f) };
-		values.soilMoistures_max[3]  = { !r[19].is_null(), r[19].as<float>(0.f) };
-		values.soilMoistures_avg[3]  = { !r[20].is_null(), r[20].as<float>(0.f) };
-		values.insideHum_min  = { !r[21].is_null(), r[21].as<float>(0.f) };
-		values.insideHum_max  = { !r[22].is_null(), r[22].as<float>(0.f) };
-		values.insideHum_avg  = { !r[23].is_null(), r[23].as<float>(0.f) };
-		values.outsideHum_min  = { !r[24].is_null(), r[24].as<float>(0.f) };
-		values.outsideHum_max  = { !r[25].is_null(), r[25].as<float>(0.f) };
-		values.outsideHum_avg  = { !r[26].is_null(), r[26].as<float>(0.f) };
-		values.extraHum_min[0]  = { !r[27].is_null(), r[27].as<float>(0.f) };
-		values.extraHum_max[0]  = { !r[28].is_null(), r[28].as<float>(0.f) };
-		values.extraHum_avg[0]  = { !r[29].is_null(), r[29].as<float>(0.f) };
-		values.extraHum_min[1]  = { !r[30].is_null(), r[30].as<float>(0.f) };
-		values.extraHum_max[1]  = { !r[31].is_null(), r[31].as<float>(0.f) };
-		values.extraHum_avg[1]  = { !r[32].is_null(), r[32].as<float>(0.f) };
-		values.solarRad_max  = { !r[33].is_null(), r[33].as<float>(0.f) };
-		values.solarRad_avg  = { !r[34].is_null(), r[34].as<float>(0.f) };
-		values.uv_max  = { !r[35].is_null(), r[35].as<float>(0.f) };
-		values.uv_avg  = { !r[36].is_null(), r[36].as<float>(0.f) };
-		values.windgust_max  = { !r[37].is_null(), r[37].as<float>(0.f) };
-		values.windgust_avg  = { !r[38].is_null(), r[38].as<float>(0.f) };
-		values.windspeed_max  = { !r[39].is_null(), r[39].as<float>(0.f) };
-		values.windspeed_avg  = { !r[40].is_null(), r[40].as<float>(0.f) };
-		values.dewpoint_min  = { !r[41].is_null(), r[41].as<float>(0.f) };
-		values.dewpoint_max  = { !r[42].is_null(), r[42].as<float>(0.f) };
-		values.dewpoint_avg  = { !r[43].is_null(), r[43].as<float>(0.f) };
-		values.et  = { !r[44].is_null(), r[44].as<float>(0.f) };
-		values.insolation_time  = { !r[45].is_null(), r[45].as<float>(0.f) };
+		values.barometer_min        = { !r[ 0].is_null(), r[ 0].as<float>(0.f) };
+		values.barometer_max        = { !r[ 1].is_null(), r[ 1].as<float>(0.f) };
+		values.barometer_avg        = { !r[ 2].is_null(), r[ 2].as<float>(0.f) };
+		values.leafWetnesses_min[0] = { !r[ 3].is_null(), r[ 3].as<float>(0.f) };
+		values.leafWetnesses_max[0] = { !r[ 4].is_null(), r[ 4].as<float>(0.f) };
+		values.leafWetnesses_avg[0] = { !r[ 5].is_null(), r[ 5].as<float>(0.f) };
+		values.leafWetnesses_min[1] = { !r[ 6].is_null(), r[ 6].as<float>(0.f) };
+		values.leafWetnesses_max[1] = { !r[ 7].is_null(), r[ 7].as<float>(0.f) };
+		values.leafWetnesses_avg[1] = { !r[ 8].is_null(), r[ 8].as<float>(0.f) };
+		values.soilMoistures_min[0] = { !r[ 9].is_null(), r[ 9].as<float>(0.f) };
+		values.soilMoistures_max[0] = { !r[10].is_null(), r[10].as<float>(0.f) };
+		values.soilMoistures_avg[0] = { !r[11].is_null(), r[11].as<float>(0.f) };
+		values.soilMoistures_min[1] = { !r[12].is_null(), r[12].as<float>(0.f) };
+		values.soilMoistures_max[1] = { !r[13].is_null(), r[13].as<float>(0.f) };
+		values.soilMoistures_avg[1] = { !r[14].is_null(), r[14].as<float>(0.f) };
+		values.soilMoistures_min[2] = { !r[15].is_null(), r[15].as<float>(0.f) };
+		values.soilMoistures_max[2] = { !r[16].is_null(), r[16].as<float>(0.f) };
+		values.soilMoistures_avg[2] = { !r[17].is_null(), r[17].as<float>(0.f) };
+		values.soilMoistures_min[3] = { !r[18].is_null(), r[18].as<float>(0.f) };
+		values.soilMoistures_max[3] = { !r[19].is_null(), r[19].as<float>(0.f) };
+		values.soilMoistures_avg[3] = { !r[20].is_null(), r[20].as<float>(0.f) };
+		values.insideHum_min        = { !r[21].is_null(), r[21].as<float>(0.f) };
+		values.insideHum_max        = { !r[22].is_null(), r[22].as<float>(0.f) };
+		values.insideHum_avg        = { !r[23].is_null(), r[23].as<float>(0.f) };
+		values.outsideHum_min       = { !r[24].is_null(), r[24].as<float>(0.f) };
+		values.outsideHum_max       = { !r[25].is_null(), r[25].as<float>(0.f) };
+		values.outsideHum_avg       = { !r[26].is_null(), r[26].as<float>(0.f) };
+		values.extraHum_min[0]      = { !r[27].is_null(), r[27].as<float>(0.f) };
+		values.extraHum_max[0]      = { !r[28].is_null(), r[28].as<float>(0.f) };
+		values.extraHum_avg[0]      = { !r[29].is_null(), r[29].as<float>(0.f) };
+		values.extraHum_min[1]      = { !r[30].is_null(), r[30].as<float>(0.f) };
+		values.extraHum_max[1]      = { !r[31].is_null(), r[31].as<float>(0.f) };
+		values.extraHum_avg[1]      = { !r[32].is_null(), r[32].as<float>(0.f) };
+		values.solarRad_max         = { !r[33].is_null(), r[33].as<float>(0.f) };
+		values.solarRad_avg         = { !r[34].is_null(), r[34].as<float>(0.f) };
+		values.uv_max               = { !r[35].is_null(), r[35].as<float>(0.f) };
+		values.uv_avg               = { !r[36].is_null(), r[36].as<float>(0.f) };
+		values.windgust_max         = { !r[37].is_null(), r[37].as<float>(0.f) };
+		values.windgust_avg         = { !r[38].is_null(), r[38].as<float>(0.f) };
+		values.windspeed_max        = { !r[39].is_null(), r[39].as<float>(0.f) };
+		values.windspeed_avg        = { !r[40].is_null(), r[40].as<float>(0.f) };
+		values.dewpoint_min         = { !r[41].is_null(), r[41].as<float>(0.f) };
+		values.dewpoint_max         = { !r[42].is_null(), r[42].as<float>(0.f) };
+		values.dewpoint_avg         = { !r[43].is_null(), r[43].as<float>(0.f) };
+		values.et                   = { !r[44].is_null(), r[44].as<float>(0.f) };
+		values.insolation_time      = { !r[45].is_null(), r[45].as<float>(0.f) };
 		if (!r[46].is_null() && (!values.rainfall.first || values.rainfall.second < r[46].as<float>(0.0f))) {
 			values.rainfall  = { true, r[46].as<float>(0.f) };
 		}
@@ -269,7 +238,7 @@ bool DbConnectionMinmax::getValues0hTo0h(const CassUuid& uuid, const date::sys_d
 
 bool DbConnectionMinmax::getYearlyValues(const CassUuid& uuid, const date::sys_days& date, std::pair<bool, float>& rain, std::pair<bool, float>& et)
 {
-	std::lock_guard{_pqTransactionMutex};
+	std::lock_guard locked{_pqTransactionMutex};
 	pqxx::work tx{_pqConnection};
 
 	try {
@@ -383,7 +352,7 @@ bool DbConnectionMinmax::insertDataPoint(const CassUuid& station, const date::sy
 
 bool DbConnectionMinmax::insertDataPointInTimescaleDB(const CassUuid& station, const date::sys_days& date, const Values& values)
 {
-	std::lock_guard<std::mutex> mutexed{_pqTransactionMutex};
+	std::lock_guard locked{_pqTransactionMutex};
 	pqxx::work tx{_pqConnection};
 	try {
 		doInsertDataPointInTimescaleDB(station, date, values, tx);

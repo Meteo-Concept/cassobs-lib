@@ -42,22 +42,6 @@
 #include "dbconnection_common.h"
 #include "cassandra_stmt_ptr.h"
 
-namespace pqxx
-{
-template<> struct string_traits<std::vector<int>, void>
-{
-	static constexpr const char *name() noexcept
-	{
-		return "int[]";
-	}
-	static constexpr bool has_null() noexcept { return false; }
-	static bool is_null(std::vector<int>) { return false; }
-	[[noreturn]] static std::vector<int> null() { pqxx::internal::throw_null_conversion(name()); }
-	static void from_string(const char str[], std::vector<int>& obj);
-	static std::string to_string(std::vector<int> obj);
-};
-}
-
 namespace meteodata {
 
 template<typename T, typename Op>

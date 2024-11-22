@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libcassobs2.la
-include_HEADERS = \
+pkginclude_HEADERS = \
 		dbconnection_observations.h\
 		dbconnection_common.h\
 		dbconnection_minmax.h\

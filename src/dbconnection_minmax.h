@@ -451,7 +451,7 @@ private:
 		"SELECT yearrain,yearet FROM meteodata_v2.minmax WHERE station = ? AND monthyear = ? AND day = ?";
 	static constexpr char SELECT_YEARLY_VALUES_POSTGRESQL[] = "select_yearly_values";
 	static constexpr char SELECT_YEARLY_VALUES_POSTGRESQL_STMT[] =
-		"SELECT yearrain,yearet FROM meteodata.minmax WHERE station = $1 AND day = (date_trunc('month', $2) + interval '1 month - 1 day')";
+		"SELECT yearrain,yearet FROM meteodata.minmax WHERE station = $1 AND day = $2";
 
 	CassandraStmtPtr _selectYearlyValues;
 

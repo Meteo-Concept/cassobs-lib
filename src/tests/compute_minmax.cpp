@@ -74,7 +74,7 @@ int main()
 			std::cout << "Tx is null\n";
 		}
 	} else {
-		std::cout << "Getting the minmax failed" << std::endl;
+		std::cout << "Getting the values from 6h to 6h failed" << std::endl;
 		return 1;
 	}
 
@@ -87,7 +87,7 @@ int main()
 			std::cout << "Tn is null\n";
 		}
 	} else {
-		std::cout << "Getting the minmax failed" << std::endl;
+		std::cout << "Getting the values from 18h to 18h failed" << std::endl;
 		return 1;
 	}
 
@@ -100,7 +100,19 @@ int main()
 			std::cout << "gust is null\n";
 		}
 	} else {
-		std::cout << "Getting the minmax failed" << std::endl;
+		std::cout << "Getting the values from 0h to 0h failed" << std::endl;
+		return 1;
+	}
+
+	if (db.getYearlyValues(uuid, target, values.yearRain, values.yearEt)) {
+		std::cout << "For day " << format("%Y-%m-%d at %Hh UTC", target) << ": ";
+		if (values.yearRain.first) {
+			std::cout << "yearly rain=" << values.yearRain.second << "mm\n";
+		} else {
+			std::cout << "yearly rain is null\n";
+		}
+	} else {
+		std::cout << "Getting the yearly values failed" << std::endl;
 		return 1;
 	}
 }

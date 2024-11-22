@@ -29,7 +29,7 @@
 #include <array>
 
 #include <cassandra.h>
-#include <date.h>
+#include <date/date.h>
 
 namespace meteodata {
 

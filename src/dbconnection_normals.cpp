@@ -31,7 +31,7 @@
 #include <map>
 
 #include <mysql.h>
-#include <date.h>
+#include <date/date.h>
 #include <cassandra.h>
 
 #include "dbconnection_normals.h"

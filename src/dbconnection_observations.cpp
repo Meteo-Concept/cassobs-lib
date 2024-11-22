@@ -35,7 +35,7 @@
 #include <cassandra.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <date.h>
+#include <date/date.h>
 #include <pqxx/pqxx>
 
 #include "dbconnection_observations.h"

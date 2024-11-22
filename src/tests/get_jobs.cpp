@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <thread>
 
-#include <date.h>
+#include <date/date.h>
 #include <cassandra.h>
 #include "../src/dbconnection_jobs.h"
 

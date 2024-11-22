@@ -34,7 +34,7 @@
 #include <utility>
 
 #include <cassandra.h>
-#include <date.h>
+#include <date/date.h>
 
 #include "dbconnection_common.h"
 #include "cassandra_stmt_ptr.h"

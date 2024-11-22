@@ -32,7 +32,7 @@
 #include <utility>
 
 #include <cassandra.h>
-#include <date.h>
+#include <date/date.h>
 #include <pqxx/strconv>
 
 #include "cassandra_stmt_ptr.h"

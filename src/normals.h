@@ -31,7 +31,7 @@
 #include <vector>
 #include <set>
 
-#include <date.h>
+#include <date/date.h>
 #include <cassandra.h>
 
 namespace meteodata {

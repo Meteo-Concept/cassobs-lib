@@ -32,7 +32,7 @@
 #include <cassandra.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <date.h>
+#include <date/date.h>
 
 #include "dbconnection_records.h"
 #include "dbconnection_common.h"

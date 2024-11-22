@@ -32,7 +32,7 @@
 #include <map>
 
 #include <mysql.h>
-#include <date.h>
+#include <date/date.h>
 
 namespace meteodata {
 

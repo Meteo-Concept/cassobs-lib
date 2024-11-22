@@ -25,7 +25,7 @@
 #include <optional>
 
 #include <cassandra.h>
-#include <date.h>
+#include <date/date.h>
 
 #include "observation.h"
 #include "filter.h"

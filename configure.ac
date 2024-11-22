@@ -48,8 +48,6 @@ AC_TYPE_SIZE_T
 AX_PTHREAD
 PKG_CHECK_MODULES(MYSQL, [mariadb mysqlclient])
 PKG_CHECK_MODULES(POSTGRES, [libpqxx])
-
-PKG_CHECK_MODULES(DATE, [date])
 PKG_CHECK_MODULES(CASSANDRA, [cassandra])
 
 # Output the configuration

@@ -36,7 +36,7 @@
 #include <mutex>
 
 #include <cassandra.h>
-#include <date.h>
+#include <date/date.h>
 #include <pqxx/pqxx>
 
 #include "message.h"

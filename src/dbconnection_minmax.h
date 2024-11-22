@@ -36,7 +36,7 @@
 #include <sstream>
 
 #include <cassandra.h>
-#include <date.h>
+#include <date/date.h>
 #include <pqxx/pqxx>
 
 #include "dbconnection_common.h"

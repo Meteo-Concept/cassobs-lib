@@ -110,13 +110,13 @@ class DbConnectionMonthMinmax : public DbConnectionCommon
 
 		bool insertDataPointInTimescaleDB(const CassUuid& station, const date::year_month& yearmonth, const Values& values);
 		template<typename I>
-		bool insertV2DataPointsInTimescaleDB(const CassUuid& station, I begin, I end)
+		bool insertDataPointsInTimescaleDB(const CassUuid& station, I begin, I end)
 		{
 			std::lock_guard<std::mutex> mutexed{_pqTransactionMutex};
 			try {
 				pqxx::work tx{_pqConnection};
 				for (I it = begin ; it != end ; ++it) {
-					doInsertV2DataPointInTimescaleDB(station, it->first, it->second, tx);
+					doInsertDataPointInTimescaleDB(station, it->first, it->second, tx);
 				}
 				tx.commit();
 			} catch (const pqxx::pqxx_exception& e) {

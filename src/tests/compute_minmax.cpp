@@ -25,6 +25,7 @@
 using namespace std::chrono;
 using namespace meteodata;
 using namespace date;
+using namespace date::literals;
 
 /**
  * @brief Entry point
@@ -62,7 +63,7 @@ int main()
 	DbConnectionMinmax::Values values;
 	CassUuid uuid;
 
-	sys_days target{2024_y/11/10};
+	sys_days target{2024_y/11/21};
 
 	cass_uuid_from_string("8217b396-2735-4de4-946b-fad1d8857d1b", &uuid);
 	if (db.getValues6hTo6h(uuid, target, values)) {
@@ -104,15 +105,24 @@ int main()
 		return 1;
 	}
 
-	if (db.getYearlyValues(uuid, target, values.yearRain, values.yearEt)) {
+	if (db.getYearlyValues(uuid, target - date::days{1}, values.yearRain, values.yearEt)) {
 		std::cout << "For day " << format("%Y-%m-%d at %Hh UTC", target) << ": ";
 		if (values.yearRain.first) {
 			std::cout << "yearly rain=" << values.yearRain.second << "mm\n";
+			values.yearRain.second += values.rainfall.second;
+			values.yearEt.second += values.et.second;
 		} else {
 			std::cout << "yearly rain is null\n";
 		}
 	} else {
 		std::cout << "Getting the yearly values failed" << std::endl;
+		return 1;
+	}
+
+	if (db.insertDataPointInTimescaleDB(uuid, target, values)) {
+		std::cout << "Inserting for day " << format("%Y-%m-%d", target);
+	} else {
+		std::cout << "Inserting the values failed" << std::endl;
 		return 1;
 	}
 }

@@ -67,9 +67,11 @@ std::string pqxx::string_traits<std::vector<int>, void>::to_string(std::vector<i
 	auto it = obj.begin();
 	if (it != obj.end()) {
 		os << *it;
+		++it;
 	}
 	while (it != obj.end()) {
 		os << "," << (*it);
+		++it;
 	}
 	os << "}";
 	return os.str();

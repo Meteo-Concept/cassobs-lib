@@ -63,14 +63,15 @@ int main()
 	DbConnectionMinmax::Values values;
 	CassUuid uuid;
 
-	sys_days target{2024_y/11/21};
+	sys_days target{2024_y/11/20};
 
-	cass_uuid_from_string("8217b396-2735-4de4-946b-fad1d8857d1b", &uuid);
+	cass_uuid_from_string("cf7629e1-d5a9-4714-b784-79edb29e744f", &uuid);
 	if (db.getValues6hTo6h(uuid, target, values)) {
 		std::cout << "Between " << format("%Y-%m-%d at %Hh UTC", target + 6h)
 			  << " and "    << format("%Y-%m-%d at %Hh UTC", target + 30h) << ": ";
 		if (values.outsideTemp_max.first) {
 			std::cout << "Tx=" << values.outsideTemp_max.second << "°C\n";
+			std::cout << "rainfall=(" << values.rainfall.first << "," << values.rainfall.second << "mm)\n";
 		} else {
 			std::cout << "Tx is null\n";
 		}

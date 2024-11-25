@@ -101,19 +101,19 @@ bool DbConnectionMinmax::getValues6hTo6h(const CassUuid& uuid, const date::sys_d
 			date::format("%F %T%z", date)
 		);
 
-		values.insideTemp_max   = { !r[0].is_null(), r[0].as<float>(0.f) };
-		values.leafTemp_max[0]  = { !r[1].is_null(), r[1].as<float>(0.f) };
-		values.leafTemp_max[1]  = { !r[2].is_null(), r[2].as<float>(0.f) };
-		values.outsideTemp_max  = { !r[3].is_null(), r[3].as<float>(0.f) };
-		values.soilTemp_max[0]  = { !r[4].is_null(), r[4].as<float>(0.f) };
-		values.soilTemp_max[1]  = { !r[5].is_null(), r[5].as<float>(0.f) };
-		values.soilTemp_max[2]  = { !r[6].is_null(), r[6].as<float>(0.f) };
-		values.soilTemp_max[3]  = { !r[7].is_null(), r[7].as<float>(0.f) };
-		values.extraTemp_max[0] = { !r[8].is_null(), r[8].as<float>(0.f) };
-		values.extraTemp_max[1] = { !r[9].is_null(), r[9].as<float>(0.f) };
-		values.extraTemp_max[2] = { !r[10].is_null(), r[10].as<float>(0.f) };
-		values.rainfall         = { !r[11].is_null(), r[11].as<float>(0.f) };
-		values.rainrate_max     = { !r[12].is_null(), r[12].as<float>(0.f) };
+		values.insideTemp_max   = { !r[ 0].is_null(), r[ 0].as<float>(0.f) };
+		values.leafTemp_max[0]  = { !r[ 1].is_null(), r[ 1].as<float>(0.f) };
+		values.leafTemp_max[1]  = { !r[ 2].is_null(), r[ 2].as<float>(0.f) };
+		values.outsideTemp_max  = { !r[ 3].is_null() || !r[4].is_null(), r[4].as<float>(r[3].as<float>(0.0f)) };
+		values.soilTemp_max[0]  = { !r[ 5].is_null(), r[ 5].as<float>(0.f) };
+		values.soilTemp_max[1]  = { !r[ 6].is_null(), r[ 6].as<float>(0.f) };
+		values.soilTemp_max[2]  = { !r[ 7].is_null(), r[ 7].as<float>(0.f) };
+		values.soilTemp_max[3]  = { !r[ 8].is_null(), r[ 8].as<float>(0.f) };
+		values.extraTemp_max[0] = { !r[ 9].is_null(), r[ 9].as<float>(0.f) };
+		values.extraTemp_max[1] = { !r[10].is_null(), r[10].as<float>(0.f) };
+		values.extraTemp_max[2] = { !r[11].is_null(), r[11].as<float>(0.f) };
+		values.rainfall         = { !r[12].is_null(), r[12].as<float>(0.f) };
+		values.rainrate_max     = { !r[13].is_null(), r[13].as<float>(0.f) };
 
 		tx.commit();
 		return true;
@@ -136,17 +136,17 @@ bool DbConnectionMinmax::getValues18hTo18h(const CassUuid& uuid, const date::sys
 			date::format("%F %T%z", date)
 		);
 
-		values.insideTemp_min   = { !r[0].is_null(), r[0].as<float>(0.f) };
-		values.leafTemp_min[0]  = { !r[1].is_null(), r[1].as<float>(0.f) };
-		values.leafTemp_min[1]  = { !r[2].is_null(), r[2].as<float>(0.f) };
-		values.outsideTemp_min  = { !r[3].is_null(), r[3].as<float>(0.f) };
-		values.soilTemp_min[0]  = { !r[4].is_null(), r[4].as<float>(0.f) };
-		values.soilTemp_min[1]  = { !r[5].is_null(), r[5].as<float>(0.f) };
-		values.soilTemp_min[2]  = { !r[6].is_null(), r[6].as<float>(0.f) };
-		values.soilTemp_min[3]  = { !r[7].is_null(), r[7].as<float>(0.f) };
-		values.extraTemp_min[0] = { !r[8].is_null(), r[8].as<float>(0.f) };
-		values.extraTemp_min[1] = { !r[9].is_null(), r[9].as<float>(0.f) };
-		values.extraTemp_min[2] = { !r[10].is_null(), r[10].as<float>(0.f) };
+		values.insideTemp_min   = { !r[ 0].is_null(), r[ 0].as<float>(0.f) };
+		values.leafTemp_min[0]  = { !r[ 1].is_null(), r[ 1].as<float>(0.f) };
+		values.leafTemp_min[1]  = { !r[ 2].is_null(), r[ 2].as<float>(0.f) };
+		values.outsideTemp_min  = { !r[ 3].is_null() || !r[4].is_null(), r[4].as<float>(r[3].as<float>(0.0f)) };
+		values.soilTemp_min[0]  = { !r[ 5].is_null(), r[ 5].as<float>(0.f) };
+		values.soilTemp_min[1]  = { !r[ 6].is_null(), r[ 6].as<float>(0.f) };
+		values.soilTemp_min[2]  = { !r[ 7].is_null(), r[ 7].as<float>(0.f) };
+		values.soilTemp_min[3]  = { !r[ 8].is_null(), r[ 8].as<float>(0.f) };
+		values.extraTemp_min[0] = { !r[ 9].is_null(), r[ 9].as<float>(0.f) };
+		values.extraTemp_min[1] = { !r[10].is_null(), r[10].as<float>(0.f) };
+		values.extraTemp_min[2] = { !r[11].is_null(), r[11].as<float>(0.f) };
 
 		tx.commit();
 		return true;

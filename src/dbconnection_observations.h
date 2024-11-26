@@ -807,6 +807,37 @@ namespace meteodata {
 			std::mutex _pqTransactionMutex;
 
 			const static std::string UPSERT_OBSERVATION;
+			const static std::string SELECT_STATION_BY_COORDS;
+			const static std::string SELECT_STATION_COORDINATES;
+			const static std::string SELECT_ALL_ICAOS;
+			const static std::string SELECT_DEFERRED_SYNOPS;
+			const static std::string UPSERT_ENTIRE_DAY_VALUES;
+			const static std::string UPSERT_TX;
+			const static std::string UPSERT_TN;
+			const static std::string UPSERT_LAST_ARCHIVE_DOWNLOAD_TIME;
+			const static std::string SELECT_WEATHERLINK_V1;
+			const static std::string SELECT_WEATHERLINK_V2;
+			const static std::string SELECT_MQTT;
+			const static std::string SELECT_FIELDCLIMATE;
+			const static std::string SELECT_OBJENIOUS;
+			const static std::string SELECT_LIVEOBJECTS;
+			const static std::string SELECT_CIMEL;
+			const static std::string SELECT_STATICTXT;
+			const static std::string SELECT_MBDATATXT;
+			const static std::string SELECT_METEOFRANCE;
+			const static std::string SELECT_VIRTUAL_STATIONS;
+			const static std::string SELECT_NBIOT;
+			const static std::string SELECT_RAINFALL;
+			const static std::string DELETE_DATA_POINTS;
+			const static std::string SELECT_ENTIRE_DAY_VALUES;
+			const static std::string SELECT_CACHED_VALUE;
+			const static std::string UPSERT_CACHED_VALUE;
+			const static std::string SELECT_LAST_SCHEDULER_DOWNLOAD_TIME;
+			const static std::string UPSERT_LAST_SCHEDULER_DOWNLOAD_TIME;
+			const static std::string SELECT_OLDEST_CONFIGURATION;
+			const static std::string SELECT_LATEST_CONFIGURATION;
+			const static std::string SELECT_ONE_CONFIGURATION;
+			const static std::string UPDATE_CONFIGURATION_STATUS;
 
 			/**
 			 * @brief Get the max temperature of a day, if recorded in the observations database

@@ -46,6 +46,37 @@
 
 namespace meteodata {
 	const std::string DbConnectionObservations::UPSERT_OBSERVATION = "upsert_observation";
+	const std::string DbConnectionObservations::SELECT_STATION_BY_COORDS = "select_station_by_coords";
+	const std::string DbConnectionObservations::SELECT_STATION_COORDINATES = "select_station_coordinates";
+	const std::string DbConnectionObservations::SELECT_ALL_ICAOS = "select_all_icaos";
+	const std::string DbConnectionObservations::SELECT_DEFERRED_SYNOPS = "select_deferred_synops";
+	const std::string DbConnectionObservations::UPSERT_ENTIRE_DAY_VALUES = "upsert_entire_day_values";
+	const std::string DbConnectionObservations::UPSERT_TX = "upsert_tx";
+	const std::string DbConnectionObservations::UPSERT_TN = "upsert_tn";
+	const std::string DbConnectionObservations::UPSERT_LAST_ARCHIVE_DOWNLOAD_TIME = "upsert_last_archive_download_time";
+	const std::string DbConnectionObservations::SELECT_WEATHERLINK_V1 = "select_weatherlink_v1";
+	const std::string DbConnectionObservations::SELECT_WEATHERLINK_V2 = "select_weatherlink_v2";
+	const std::string DbConnectionObservations::SELECT_MQTT = "select_mqtt";
+	const std::string DbConnectionObservations::SELECT_FIELDCLIMATE = "select_fieldclimate";
+	const std::string DbConnectionObservations::SELECT_OBJENIOUS = "select_objenious";
+	const std::string DbConnectionObservations::SELECT_LIVEOBJECTS = "select_liveobjects";
+	const std::string DbConnectionObservations::SELECT_CIMEL = "select_cimel";
+	const std::string DbConnectionObservations::SELECT_STATICTXT = "select_statictxt";
+	const std::string DbConnectionObservations::SELECT_MBDATATXT = "select_mbdatatxt";
+	const std::string DbConnectionObservations::SELECT_METEOFRANCE = "select_meteofrance";
+	const std::string DbConnectionObservations::SELECT_VIRTUAL_STATIONS = "select_virtual_stations";
+	const std::string DbConnectionObservations::SELECT_NBIOT = "select_nbiot";
+	const std::string DbConnectionObservations::SELECT_RAINFALL = "select_rainfall";
+	const std::string DbConnectionObservations::DELETE_DATA_POINTS = "delete_data_points";
+	const std::string DbConnectionObservations::SELECT_ENTIRE_DAY_VALUES = "select_entire_day_values";
+	const std::string DbConnectionObservations::SELECT_CACHED_VALUE = "select_cached_value";
+	const std::string DbConnectionObservations::UPSERT_CACHED_VALUE = "upsert_cached_value";
+	const std::string DbConnectionObservations::SELECT_LAST_SCHEDULER_DOWNLOAD_TIME = "select_last_scheduler_download_time";
+	const std::string DbConnectionObservations::UPSERT_LAST_SCHEDULER_DOWNLOAD_TIME = "upsert_last_scheduler_download_time";
+	const std::string DbConnectionObservations::SELECT_OLDEST_CONFIGURATION = "select_oldest_configuration";
+	const std::string DbConnectionObservations::SELECT_LATEST_CONFIGURATION = "select_latest_configuration";
+	const std::string DbConnectionObservations::SELECT_ONE_CONFIGURATION = "select_one_configuration";
+	const std::string DbConnectionObservations::UPDATE_CONFIGURATION_STATUS = "update_configuration_status";
 
 	DbConnectionObservations::DbConnectionObservations(
 			const std::string& address, const std::string& user, const std::string& password,
@@ -63,17 +94,38 @@ namespace meteodata {
 			"WHERE elevation = ? AND latitude = ? AND longitude = ?"
 		);
 
+		_pqConnection.prepare(SELECT_STATION_BY_COORDS,
+			"SELECT coords.station FROM meteodata.connectors c "
+			"WHERE c.connector='coords' AND c.param @> jsonb_build_object('latitude',$1,'longitude',$2,'elevation',$3)"
+		);
+
 		prepareOneStatement(_selectStationCoordinates,
 			"SELECT latitude,longitude,elevation,name,polling_period FROM meteodata.stations "
 			"WHERE id = ?"
+		);
+
+		_pqConnection.prepare(SELECT_STATION_COORDINATES,
+			"SELECT s.latitude,s.longitude,s.elevation,s.name,sp.value AS polling_period "
+			"FROM meteodata.stations s, meteodata.station_properties sp "
+			"WHERE s.id = $1 AND sp.station_id = s.id AND sp.property_type_name = 'polling_period' AND sp.enabled = 1"
 		);
 
 		prepareOneStatement(_selectAllIcaos,
 			"SELECT id,icao,active FROM meteodata.stationsfr"
 		);
 
+		_pqConnection.prepare(SELECT_ALL_ICAOS,
+			"SELECT station AS id, (param #>> '{icao}') AS icao, active "
+			"FROM meteodata.connectors WHERE connector = 'meteofrance'"
+		);
+
 		prepareOneStatement(_selectDeferredSynops,
 			"SELECT uuid,icao FROM meteodata.deferred_synops"
+		);
+
+		_pqConnection.prepare(SELECT_DEFERRED_SYNOPS,
+			"SELECT station AS uuid, (param #>> '{icao}') AS icao, active "
+			"FROM meteodata.connectors WHERE connector = 'deferred_synop' AND active = true"
 		);
 
 		prepareOneStatement(_selectLastDataBefore,
@@ -358,6 +410,14 @@ namespace meteodata {
 			"?, ?)"		// "rainfall24, insolation_time24)"
 		);
 
+		_pqConnection.prepare(UPSERT_ENTIRE_DAY_VALUES,
+			"INSERT INTO meteodata.day_values "
+			"(station, day, rainfall24, insolation_time24) "
+			"VALUES ($1, $2, $3, $4) "
+			"ON CONFLICT (station, day) DO UPDATE "
+			"SET rainfall24=$3, insolation_time24=$4"
+		);
+
 		prepareOneStatement(_insertTx,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
@@ -369,6 +429,14 @@ namespace meteodata {
 			"?)"		// "tx"
 		);
 
+		_pqConnection.prepare(UPSERT_TX,
+			"INSERT INTO meteodata.day_values "
+			"(station, day, tx) "
+			"VALUES ($1, $2, $3) "
+			"ON CONFLICT (station, day) DO UPDATE "
+			"SET tx=$3"
+		);
+
 		prepareOneStatement(_insertTn,
 			"INSERT INTO meteodata_v2.meteo ("
 			"station,"
@@ -378,6 +446,14 @@ namespace meteodata {
 			"?,"		// "station,"
 			"?, ?,"		// "day, time,"
 			"?)"		// "tn"
+		);
+
+		_pqConnection.prepare(UPSERT_TN,
+			"INSERT INTO meteodata.day_values "
+			"(station, day, tn) "
+			"VALUES ($1, $2, $3) "
+			"ON CONFLICT (station, day) DO UPDATE "
+			"SET tn=$3"
 		);
 
 		prepareOneStatement(_insertDataPointInMonitoringDB,
@@ -433,52 +509,141 @@ namespace meteodata {
 			"UPDATE meteodata.stations SET last_archive_download = ? WHERE id = ?"
 		);
 
+		_pqConnection.prepare(UPSERT_LAST_ARCHIVE_DOWNLOAD_TIME,
+			"UPDATE meteodata.last_archive_download "
+			"SET last_archive_download = $1 WHERE station = $2"
+		);
+
 		prepareOneStatement(_selectWeatherlinkStations,
 			"SELECT station, active, auth, api_token, tz FROM meteodata.weatherlink"
+		);
+
+		_pqConnection.prepare(SELECT_WEATHERLINK_V1,
+			"SELECT WLv1.station,P.* "
+			"FROM meteodata.connectors WLv1 "
+			"CROSS JOIN LATERAL jsonb_to_record(WLv1.param) AS P(auth varchar, api_token varchar, tz int) "
+			"WHERE connector = 'weatherlink_v1' AND active = true"
 		);
 
 		prepareOneStatement(_selectWeatherlinkAPIv2Stations,
 			"SELECT station, active, archived, substations, weatherlink_id, parsers FROM meteodata.weatherlink_apiv2"
 		);
 
+		_pqConnection.prepare(SELECT_WEATHERLINK_V2,
+			"SELECT WLv2.station,P.* "
+			"FROM meteodata.connectors WLv2 "
+			"CROSS JOIN LATERAL jsonb_to_record(WLv2.param) AS P(archived bool, substations text, weatherlink_id varchar, parsers text) "
+			"WHERE connector = 'weatherlink_v2' AND active = true"
+		);
+
 		prepareOneStatement(_selectMqttStations,
 			"SELECT station, active, host, port, user, password, topic, tz FROM meteodata.mqtt"
+		);
+
+		_pqConnection.prepare(SELECT_MQTT,
+			"SELECT mqtt.station,P.* "
+			"FROM meteodata.connectors mqtt "
+			"CROSS JOIN LATERAL jsonb_to_record(mqtt.param) AS P(host varchar, port int, \"user\" varchar, \"password\" varchar, topic varchar, tz int) "
+			"WHERE connector = 'mqtt' AND active = true"
 		);
 
 		prepareOneStatement(_selectFieldClimateApiStations,
 			"SELECT station, active, fieldclimate_id, sensors, tz FROM meteodata.fieldclimate"
 		);
 
+		_pqConnection.prepare(SELECT_FIELDCLIMATE,
+			"SELECT fieldclimate.station,P.* "
+			"FROM meteodata.connectors fieldclimate "
+			"CROSS JOIN LATERAL jsonb_to_record(fieldclimate.param) AS P(fieldclimate_id varchar, sensors text, tz int) "
+			"WHERE connector = 'fieldclimate' AND active = true"
+		);
+
 		prepareOneStatement(_selectObjeniousApiStations,
 			"SELECT station, active, objenious_id, variables FROM meteodata.objenious"
+		);
+
+		_pqConnection.prepare(SELECT_OBJENIOUS,
+			"SELECT objenious.station,P.* "
+			"FROM meteodata.connectors objenious "
+			"CROSS JOIN LATERAL jsonb_to_record(objenious.param) AS P(objenious_id varchar, variables text) "
+			"WHERE connector = 'objenious' AND active = true"
 		);
 
 		prepareOneStatement(_selectLiveobjectsStations,
 			"SELECT station, active, stream_id, topic_prefix FROM meteodata.liveobjects"
 		);
 
+		_pqConnection.prepare(SELECT_LIVEOBJECTS,
+			"SELECT liveobjects.station,P.* "
+			"FROM meteodata.connectors liveobjects "
+			"CROSS JOIN LATERAL jsonb_to_record(liveobjects.param) AS P(stream_id varchar, topic_prefix varchar) "
+			"WHERE connector = 'liveobjects' AND active = true"
+		);
+
 		prepareOneStatement(_selectCimelStations,
 			"SELECT station, active, cimelid, tz FROM meteodata.cimel"
+		);
+
+		_pqConnection.prepare(SELECT_CIMEL,
+			"SELECT cimel.station,P.* "
+			"FROM meteodata.connectors cimel "
+			"CROSS JOIN LATERAL jsonb_to_record(cimel.param) AS P(cimelid varchar, tz int) "
+			"WHERE connector = 'cimel' AND active = true"
 		);
 
 		prepareOneStatement(_selectStatICTxtStations,
 			"SELECT station, active, host, url, https, tz, sensors FROM meteodata.statictxt"
 		);
 
+		_pqConnection.prepare(SELECT_STATICTXT,
+			"SELECT static.station,P.* "
+			"FROM meteodata.connectors static "
+			"CROSS JOIN LATERAL jsonb_to_record(static.param) AS P(host varchar, url varchar, https bool, tz int, sensors text) "
+			"WHERE connector = 'static' AND active = true"
+		);
+
 		prepareOneStatement(_selectMBDataTxtStations,
 			"SELECT station, active, host, url, https, tz, type FROM meteodata.mbdatatxt"
+		);
+
+		_pqConnection.prepare(SELECT_MBDATATXT,
+			"SELECT mbdata.station,P.* "
+			"FROM meteodata.connectors mbdata "
+			"CROSS JOIN LATERAL jsonb_to_record(mbdata.param) AS P(host varchar, url varchar, https bool, tz int, type varchar) "
+			"WHERE connector = 'mbdata' AND active = true"
 		);
 
 		prepareOneStatement(_selectMeteoFranceStations,
 			"SELECT id, active, icao, idstation, date_creation, latitude, longitude, elevation, type FROM meteodata.stationsfr"
 		);
 
+		_pqConnection.prepare(SELECT_METEOFRANCE,
+			"SELECT mbdata.meteofrance,P.* "
+			"FROM meteodata.connectors meteofrance "
+			"CROSS JOIN LATERAL jsonb_to_record(meteofrance.param) AS P(icao varchar, idstation varchar, latitude float, longitude float, elevation int, type varchar) "
+			"WHERE connector = 'meteofrance' AND active = true"
+		);
+
 		prepareOneStatement(_selectVirtualStations,
 			"SELECT station, active, period, sources FROM meteodata.virtual_stations"
 		);
 
+		_pqConnection.prepare(SELECT_VIRTUAL_STATIONS,
+			"SELECT mbdata.virtual,P.* "
+			"FROM meteodata.connectors virtual "
+			"CROSS JOIN LATERAL jsonb_to_record(virtual.param) AS P(period int, sources text) "
+			"WHERE connector = 'virtual' AND active = true"
+		);
+
 		prepareOneStatement(_selectNbiotStations,
 			"SELECT station, active, imei, imsi, hmac_key, sensor_type FROM meteodata.nbiot"
+		);
+
+		_pqConnection.prepare(SELECT_NBIOT,
+			"SELECT mbdata.nbiot,P.* "
+			"FROM meteodata.connectors nbiot "
+			"CROSS JOIN LATERAL jsonb_to_record(nbiot.param) AS P(imei varchar, imsi varchar, hmac_key varchar, sensor_type varchar) "
+			"WHERE connector = 'nbiot' AND active = true"
 		);
 
 		prepareOneStatement(_getRainfall,
@@ -486,8 +651,18 @@ namespace meteodata {
 			"WHERE station = ? AND day = ? AND time > ? AND time <= ?"
 		);
 
+		_pqConnection.prepare(SELECT_RAINFALL,
+			"SELECT SUM(rainfall) FROM meteodata.observations "
+			"WHERE station = $1 AND datetime >= $2 AND datetime < $3"
+		);
+
 		prepareOneStatement(_deleteDataPoints,
 			"DELETE FROM meteodata_v2.meteo WHERE station=? AND day=? AND time>? AND time<=?"
+		);
+
+		_pqConnection.prepare(DELETE_DATA_POINTS,
+			"DELETE FROM meteodata.observations "
+			"WHERE station = $1 AND datetime >= $2 AND datetime < $3"
 		);
 
 		prepareOneStatement(_selectTx,
@@ -498,36 +673,86 @@ namespace meteodata {
 			"SELECT tn FROM meteodata_v2.meteo WHERE station=? AND day=? LIMIT 1"
 		);
 
+		_pqConnection.prepare(SELECT_ENTIRE_DAY_VALUES,
+			"SELECT * FROM meteodata.day_values "
+			"WHERE station = $1 AND day = $2"
+		);
+
 		prepareOneStatement(_selectCached,
 			"SELECT time, value_int, value_float FROM meteodata_v2.cache WHERE station=? AND cache_key=?"
+		);
+
+		_pqConnection.prepare(SELECT_CACHED_VALUE,
+			"SELECT * FROM meteodata.station_status "
+			"WHERE station = $1 AND cache_key = $2"
 		);
 
 		prepareOneStatement(_insertIntoCache,
 			"INSERT INTO meteodata_v2.cache (station, cache_key, time, value_int, value_float) VALUES (?, ?, ?, ?, ?)"
 		);
 
+		_pqConnection.prepare(UPSERT_CACHED_VALUE,
+			"INSERT INTO meteodata.station_status (station, cache_key, datetime, value) "
+			"VALUES ($1, $2, $3, $4) "
+			"ON CONFLICT (station, cache_key) DO UPDATE "
+			"SET datetime=$3, value=$4"
+		);
+
 		prepareOneStatement(_selectLastSchedulerDownloadTime,
 			"SELECT last_download FROM meteodata.scheduling_status WHERE scheduler=?"
+		);
+
+		_pqConnection.prepare(SELECT_LAST_SCHEDULER_DOWNLOAD_TIME,
+			"SELECT last_download FROM meteodata.scheduling_status "
+			"WHERE scheduler = $1"
 		);
 
 		prepareOneStatement(_insertLastSchedulerDownloadTime,
 			"INSERT INTO meteodata.scheduling_status (scheduler,last_download) VALUES (?,?)"
 		);
 
+		_pqConnection.prepare(UPSERT_LAST_SCHEDULER_DOWNLOAD_TIME,
+			"INSERT INTO meteodata.scheduling_status (scheduler,last_download) "
+			"VALUES ($1,$2) "
+			"ON CONFLICT (scheduler) DO UPDATE SET last_download=$2"
+		);
+
 		prepareOneStatement(_selectOldestConfiguration,
 			"SELECT station, active, id, config, added_on FROM meteodata.pending_configurations WHERE station=? ORDER BY id ASC"
+		);
+
+		_pqConnection.prepare(SELECT_OLDEST_CONFIGURATION,
+			"SELECT station, id, config, added_on FROM meteodata.pending_configuration "
+			"WHERE station = $1 AND active = true "
+			"ORDER BY added_on ASC LIMIT 1"
 		);
 
 		prepareOneStatement(_selectLastConfiguration,
 			"SELECT station, active, id, config, added_on FROM meteodata.pending_configurations WHERE station=? ORDER BY id DESC"
 		);
 
+		_pqConnection.prepare(SELECT_LATEST_CONFIGURATION,
+			"SELECT station, id, config, added_on FROM meteodata.pending_configuration "
+			"WHERE station = $1 AND active = true "
+			"ORDER BY added_on DESC LIMIT 1"
+		);
+
 		prepareOneStatement(_selectOneConfiguration,
 			"SELECT station, active, id, config, added_on FROM meteodata.pending_configurations WHERE station=? AND id=?"
 		);
 
+		_pqConnection.prepare(SELECT_ONE_CONFIGURATION,
+			"SELECT station, active, id, config, added_on FROM meteodata.pending_configuration "
+			"WHERE station = $1 AND id = $2"
+		);
+
 		prepareOneStatement(_updateConfigurationStatus,
 			"UPDATE meteodata.pending_configurations SET active=? WHERE station=? AND id=?"
+		);
+
+		_pqConnection.prepare(UPDATE_CONFIGURATION_STATUS,
+			"UPDATE meteodata.pending_configuration "
+			"SET active = $1 WHERE station = $2 AND id = $3"
 		);
 
 		_pqConnection.prepare(UPSERT_OBSERVATION,

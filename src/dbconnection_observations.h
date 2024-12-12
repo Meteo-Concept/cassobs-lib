@@ -629,6 +629,31 @@ namespace meteodata {
 			 */
 			bool updateConfigurationStatus(const CassUuid& station, int id, bool active);
 
+			/**
+			 * @brief Record a downloaded message in the processing queue, for insertion of the
+			 * observation(s) inside later
+			 *
+			 * @param[in] station The station to insert a download for
+			 * @param[in] datetime The time at which the download was received
+			 * @param[in] connector The connector, identifying the station and download type
+			 * @param[in] download The raw message downloaded
+			 * @param[in] status The new status, true to mark the configuration as applied and no longer
+			 * active, false otherwise
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool insertDownload(const CassUuid& station, time_t datetime, const std::string& connector, const std::string& download, bool inserted);
+
+			/**
+			 * @brief Update the status of a download, to mark it as processed/inserted in DB or not
+			 *
+			 * @param[in] status The new status, true to mark the download as processed and no longer
+			 * active, false otherwise
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool updateDownloadStatus(const CassUuid& station, time_t download, bool inserted);
+
 		private:
 			/**
 			 * @brief The prepared statement for the getStationByCoords()
@@ -838,6 +863,8 @@ namespace meteodata {
 			const static std::string SELECT_LATEST_CONFIGURATION;
 			const static std::string SELECT_ONE_CONFIGURATION;
 			const static std::string UPDATE_CONFIGURATION_STATUS;
+			const static std::string INSERT_DOWNLOAD;
+			const static std::string UPDATE_DOWNLOAD_STATUS;
 
 			/**
 			 * @brief Get the max temperature of a day, if recorded in the observations database

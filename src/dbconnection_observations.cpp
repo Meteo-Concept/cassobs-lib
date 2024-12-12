@@ -77,6 +77,8 @@ namespace meteodata {
 	const std::string DbConnectionObservations::SELECT_LATEST_CONFIGURATION = "select_latest_configuration";
 	const std::string DbConnectionObservations::SELECT_ONE_CONFIGURATION = "select_one_configuration";
 	const std::string DbConnectionObservations::UPDATE_CONFIGURATION_STATUS = "update_configuration_status";
+	const std::string DbConnectionObservations::INSERT_DOWNLOAD = "insert_download";
+	const std::string DbConnectionObservations::UPDATE_DOWNLOAD_STATUS = "update_download_status";
 
 	DbConnectionObservations::DbConnectionObservations(
 			const std::string& address, const std::string& user, const std::string& password,
@@ -753,6 +755,17 @@ namespace meteodata {
 		_pqConnection.prepare(UPDATE_CONFIGURATION_STATUS,
 			"UPDATE meteodata.pending_configuration "
 			"SET active = $1 WHERE station = $2 AND id = $3"
+		);
+
+		_pqConnection.prepare(INSERT_DOWNLOAD,
+			"INSERT INTO downloads (station, datetime, connector, content, inserted) "
+			" VALUES ($1, to_timestamp($2), $3, $4, $5) "
+			" ON CONFLICT (station, datetime) DO UPDATE "
+			" SET connector=$3, content=$4, inserted=$5"
+		);
+
+		_pqConnection.prepare(UPDATE_DOWNLOAD_STATUS,
+			"UPDATE downloads SET inserted=$3 WHERE station=$1 AND datetime=to_timestamp($2)"
 		);
 
 		_pqConnection.prepare(UPSERT_OBSERVATION,
@@ -3144,5 +3157,47 @@ namespace meteodata {
 		}
 
 		return ret;
+	}
+
+	bool DbConnectionObservations::insertDownload(const CassUuid& station, time_t datetime,
+		const std::string& connector, const std::string& download, bool inserted)
+	{
+		std::lock_guard locked{_pqTransactionMutex};
+		pqxx::work tx{_pqConnection};
+		try {
+			char uuid[CASS_UUID_STRING_LENGTH];
+			cass_uuid_string(station, uuid);
+			tx.exec_prepared0(INSERT_DOWNLOAD,
+				uuid,
+				datetime,
+				connector,
+				download,
+				inserted
+			);
+			tx.commit();
+		} catch (const pqxx::pqxx_exception& e) {
+			return false;
+		}
+		return true;
+	}
+
+	bool DbConnectionObservations::updateDownloadStatus(const CassUuid& station,
+		time_t datetime, bool inserted)
+	{
+		std::lock_guard locked{_pqTransactionMutex};
+		pqxx::work tx{_pqConnection};
+		try {
+			char uuid[CASS_UUID_STRING_LENGTH];
+			cass_uuid_string(station, uuid);
+			tx.exec_prepared0(UPDATE_DOWNLOAD_STATUS,
+				uuid,
+				datetime,
+				inserted
+			);
+			tx.commit();
+		} catch (const pqxx::pqxx_exception& e) {
+			return false;
+		}
+		return true;
 	}
 }

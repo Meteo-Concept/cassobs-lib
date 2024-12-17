@@ -97,7 +97,7 @@ namespace meteodata {
 		);
 
 		_pqConnection.prepare(SELECT_STATION_BY_COORDS,
-			"SELECT coords.station FROM meteodata.connectors c "
+			"SELECT c.station FROM meteodata.connectors c "
 			"WHERE c.connector='coords' AND c.param @> jsonb_build_object('latitude',$1,'longitude',$2,'elevation',$3)"
 		);
 
@@ -161,6 +161,7 @@ namespace meteodata {
 			"soiltemp30cm, soiltemp40cm, "
 			"soiltemp50cm, soiltemp60cm, "
 			"leaf_wetness_percent1, "
+			"soil_conductivity_1, "
 			"voltage_battery, voltage_solar_panel, voltage_backup "
 			" FROM meteodata_v2.meteo WHERE station = ? "
 			" AND day = ? AND time <= ? ORDER BY time DESC LIMIT 1"
@@ -211,6 +212,7 @@ namespace meteodata {
 			"soiltemp30cm, soiltemp40cm, "
 			"soiltemp50cm, soiltemp60cm, "
 			"leaf_wetness_percent1, "
+			"soil_conductivity_1, "
 			"voltage_battery, voltage_solar_panel, voltage_backup "
 			") "
 			" VALUES ("
@@ -243,6 +245,7 @@ namespace meteodata {
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
 			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
 			"?, "		// "leaf_wetness_percent1"
+			"?, "		// "soil_conductivity_1"
 			"?,?,? "	// "voltage_battery, voltage_solar_panel, voltage_backup"
 			")"
 		);
@@ -280,6 +283,7 @@ namespace meteodata {
 			"soiltemp30cm, soiltemp40cm, "
 			"soiltemp50cm, soiltemp60cm,"
 			"leaf_wetness_percent1, "
+			"soil_conductivity_1, "
 			"voltage_battery, voltage_solar_panel, voltage_backup "
 			") "
 			" VALUES ("
@@ -312,6 +316,7 @@ namespace meteodata {
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
 			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
 			"?,"		// "leaf_wetness_percent1"
+			"?,"		// "soil_conductivity1"
 			"?,?,? "	// "voltage_battery, voltage_solar_panel, voltage_backup"
 			")"
 		);
@@ -350,6 +355,7 @@ namespace meteodata {
 			"soiltemp30cm, soiltemp40cm, "
 			"soiltemp50cm, soiltemp60cm,"
 			"leaf_wetness_percent1, "
+			"soil_conductivity_1, "
 			"voltage_battery, voltage_solar_panel, voltage_backup, "
 			"rainfall1h, rainfall3h, rainfall6h, "
 			"rainfall12h, rainfall24h, rainfall48h, "
@@ -389,6 +395,7 @@ namespace meteodata {
 			"?,?,?,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
 			"?,?,?,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
 			"?,"		// "leaf_wetness_percent1, "
+			"?,"		// "soil_conductivity1, "
 			"?,?,?, "	// "voltage_battery, voltage_solar_panel, voltage_backup, "
 			"?,?,?, "	// "rainfall1h, rainfall3h, rainfall6h, "
 			"?,?,?, "	// "rainfall12h, rainfall24h, rainfall48h, "
@@ -801,6 +808,7 @@ namespace meteodata {
 			"soiltemp30cm, soiltemp40cm, "
 			"soiltemp50cm, soiltemp60cm,"
 			"leaf_wetness_percent1, "
+			"soil_conductivity1, "
 			"voltage_battery, voltage_solar_panel, voltage_backup "
 			") "
 			" VALUES ("
@@ -833,7 +841,8 @@ namespace meteodata {
 			"$48,$49,$50,"	// "soiltemp10cm, soiltemp20cm, soiltemp30cm"
 			"$51,$52,$53,"	// "soiltemp40cm, soiltemp50cm, soiltemp60cm"
 			"$54,"		// "leaf_wetness_percent1"
-			"$55,$56,$57 "	// "voltage_battery, voltage_solar_panel, voltage_backup"
+			"$55,"		// "soil_conductivity1"
+			"$56,$57,$58 "	// "voltage_battery, voltage_solar_panel, voltage_backup"
 			") ON CONFLICT (station, datetime) DO UPDATE "
 			" SET "
 		        "barometer=COALESCE($3, meteodata.observations.barometer),"
@@ -888,9 +897,10 @@ namespace meteodata {
 			"soiltemp50cm=COALESCE($52, meteodata.observations.soiltemp50cm),"
 			"soiltemp60cm=COALESCE($53, meteodata.observations.soiltemp60cm),"
 			"leaf_wetness_percent1=COALESCE($54, meteodata.observations.leaf_wetness_percent1),"
-			"voltage_battery=COALESCE($55, meteodata.observations.voltage_battery),"
-			"voltage_solar_panel=COALESCE($56, meteodata.observations.voltage_solar_panel),"
-			"voltage_backup=COALESCE($57, meteodata.observations.voltage_backup) "
+			"soil_conductivity1=COALESCE($55, meteodata.observations.soil_conductivity1),"
+			"voltage_battery=COALESCE($56, meteodata.observations.voltage_battery),"
+			"voltage_solar_panel=COALESCE($57, meteodata.observations.voltage_solar_panel),"
+			"voltage_backup=COALESCE($58, meteodata.observations.voltage_backup) "
 		);
 
 	}
@@ -1237,6 +1247,10 @@ namespace meteodata {
 			cass_statement_bind_float(statement, c, obs.leafwetness_percent1.second);
 		c++;
 		/*************************************************************/
+		if (obs.soil_conductivity1.first)
+			cass_statement_bind_float(statement, c, obs.soil_conductivity1.second);
+		c++;
+		/*************************************************************/
 		if (obs.voltage_battery.first)
 			cass_statement_bind_float(statement, c, obs.voltage_backup.second);
 		c++;
@@ -1499,6 +1513,7 @@ namespace meteodata {
 			obs.soiltemp50cm.first ? &obs.soiltemp50cm.second : nullptr,
 			obs.soiltemp60cm.first ? &obs.soiltemp60cm.second : nullptr,
 			obs.leafwetness_percent1.first ? &obs.leafwetness_percent1.second : nullptr,
+			obs.soil_conductivity1.first ? &obs.soil_conductivity1.second : nullptr,
 			obs.voltage_battery.first ? &obs.voltage_battery.second : nullptr,
 			obs.voltage_backup.first ? &obs.voltage_backup.second : nullptr,
 			obs.voltage_solar_panel.first ? &obs.voltage_solar_panel.second : nullptr

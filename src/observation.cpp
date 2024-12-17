@@ -166,6 +166,9 @@ void Observation::set(const std::string& column, float value)
 	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
 		leafwetness_percent1.first = true;
 		leafwetness_percent1.second = value;
+	} else if (column == "soil_conductivity1") {
+		soil_conductivity1.first = true;
+		soil_conductivity1.second = value;
 	} else if (column == "voltage_battery") {
 		voltage_battery.first = true;
 		voltage_battery.second = value;
@@ -319,6 +322,8 @@ float Observation::get<float>(const std::string& column) const
 		return soiltemp60cm.second;
 	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
 		return leafwetness_percent1.second;
+	} else if (column == "soil_conductivity1") {
+		return soil_conductivity1.second;
 	} else if (column == "voltage_battery") {
 		return voltage_battery.second;
 	} else if (column == "voltage_solar_panel") {
@@ -477,6 +482,8 @@ bool Observation::isPresent(const std::string& column) const
 		return soiltemp60cm.first;
 	} else if (column == "leafwetness_percent1" || column == "leaf_wetness_percent1") {
 		return leafwetness_percent1.first;
+	} else if (column == "soil_conductivity1") {
+		return soil_conductivity1.first;
 	} else if (column == "voltage_battery") {
 		return voltage_battery.first;
 	} else if (column == "voltage_solar_panel") {
@@ -673,6 +680,9 @@ void Observation::filterOutImpossibleValues()
 	leafwetness_percent1.first = leafwetness_percent1.first
 		&& leafwetness_percent1.second >= Filter::MIN_PERCENTAGE
 		&& leafwetness_percent1.second <= Filter::MAX_PERCENTAGE;
+	/*************************************************************/
+	soil_conductivity1.first = soil_conductivity1.first
+		&& soil_conductivity1.second >= Filter::MIN_CONDUCTIVITY;
 	/*************************************************************/
 	voltage_battery.first = voltage_battery.first
 		&& voltage_battery.second >= Filter::MIN_VOLTAGE

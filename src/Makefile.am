@@ -45,7 +45,7 @@ libcassobs2_la_SOURCES = \
 libcassobs2_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CFLAGS) $(DATE_CFLAGS) $(MYSQL_CFLAGS) $(POSTGRES_CFLAGS)
 libcassobs2_la_CXXFLAGS =
 libcassobs2_la_LIBADD = $(PTHREAD_LIBS) $(CASSANDRA_LIBS) $(DATE_LIBS) $(MYSQL_LIBS) $(POSTGRES_LIBS)
-libcassobs2_la_LDFLAGS = -version-info 19:0:2
+libcassobs2_la_LDFLAGS = -version-info 20:0:0
 
 check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations get_meteofrance_stations compute_minmax compute_month_minmax get_jobs get_map_obs get_virtual_stations get_nbiot_stations get_config insert_timescaledb
 TESTS=$(check_PROGRAMS)

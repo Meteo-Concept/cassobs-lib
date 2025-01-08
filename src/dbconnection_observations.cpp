@@ -2500,6 +2500,24 @@ namespace meteodata {
 			ret = false;
 		}
 
+		std::lock_guard locked{_pqTransactionMutex};
+		pqxx::work tx{_pqConnection};
+		auto realStart = start < day ? day : start;
+		auto endOfDay = day + date::days{1};
+		auto realEnd = end > endOfDay ? endOfDay : end;
+		try {
+			char uuid[CASS_UUID_STRING_LENGTH];
+			cass_uuid_string(station, uuid);
+			tx.exec_prepared0(DELETE_DATA_POINTS,
+				uuid,
+				date::format("%F %TZ", realStart),
+				date::format("%F %TZ", realEnd)
+			);
+			tx.commit();
+		} catch (const pqxx::pqxx_exception& e) {
+			ret = false;
+		}
+
 		return ret;
 	}
 
@@ -3184,7 +3202,7 @@ namespace meteodata {
 			cass_uuid_string(station, uuid);
 			tx.exec_prepared0(INSERT_DOWNLOAD,
 				uuid,
-				datetime,
+				date::format("%F %T%z", chrono::system_clock::from_time_t(datetime)),
 				connector,
 				download,
 				inserted
@@ -3206,7 +3224,7 @@ namespace meteodata {
 			cass_uuid_string(station, uuid);
 			tx.exec_prepared0(UPDATE_DOWNLOAD_STATUS,
 				uuid,
-				datetime,
+				date::format("%F %T%z", chrono::system_clock::from_time_t(datetime)),
 				inserted
 			);
 			tx.commit();

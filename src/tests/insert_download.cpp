@@ -22,6 +22,7 @@
 
 #include <date/date.h>
 #include "../src/dbconnection_observations.h"
+#include "../src/download.h"
 
 /**
  * @brief The configuration file default path
@@ -71,5 +72,13 @@ int main()
 	time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
 	db.insertDownload(uuid, now, "test", "{}", false, "new");
-	db.updateDownloadStatus(uuid, now, false, "running");
+	std::vector<Download> ds;
+	db.selectDownloadsByStation(uuid, "test", ds);
+	std::cerr << "Found " << ds.size() << " stations" << std::endl;
+	for (const Download& d : ds) {
+		char uuid_str[CASS_UUID_STRING_LENGTH];
+		cass_uuid_string(d.station, uuid_str);
+		std::cerr << uuid_str << " - " << d.connector << " - " << d.datetime << " - " << d.content << "\n";
+		db.updateDownloadStatus(uuid, chrono::system_clock::to_time_t(d.datetime), false, "completed");
+	}
 }

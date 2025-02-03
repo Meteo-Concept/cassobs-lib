@@ -43,6 +43,7 @@
 #include "map_observation.h"
 #include "cassandra_stmt_ptr.h"
 #include "virtual_station.h"
+#include "download.h"
 
 namespace meteodata {
 	const std::string DbConnectionObservations::UPSERT_OBSERVATION = "upsert_observation";
@@ -79,6 +80,7 @@ namespace meteodata {
 	const std::string DbConnectionObservations::UPDATE_CONFIGURATION_STATUS = "update_configuration_status";
 	const std::string DbConnectionObservations::INSERT_DOWNLOAD = "insert_download";
 	const std::string DbConnectionObservations::UPDATE_DOWNLOAD_STATUS = "update_download_status";
+	const std::string DbConnectionObservations::SELECT_DOWNLOADS_BY_STATION = "select_downloads_by_station";
 
 	DbConnectionObservations::DbConnectionObservations(
 			const std::string& address, const std::string& user, const std::string& password,
@@ -773,6 +775,14 @@ namespace meteodata {
 
 		_pqConnection.prepare(UPDATE_DOWNLOAD_STATUS,
 			"UPDATE downloads SET inserted=$3, job_state=$4 WHERE station=$1 AND datetime=$2"
+		);
+
+		_pqConnection.prepare(SELECT_DOWNLOADS_BY_STATION,
+			"SELECT station, datetime, connector, content, inserted, job_state "
+			" FROM downloads "
+			" WHERE station=$1 AND connector=$2 AND job_state='new' "
+			" ORDER BY datetime ASC "
+			" FOR UPDATE SKIP LOCKED"
 		);
 
 		_pqConnection.prepare(UPSERT_OBSERVATION,
@@ -3230,6 +3240,48 @@ namespace meteodata {
 				inserted,
 				jobState
 			);
+			tx.commit();
+		} catch (const pqxx::pqxx_exception& e) {
+			return false;
+		}
+		return true;
+	}
+
+	bool DbConnectionObservations::selectDownloadsByStation(const CassUuid& station,
+		const std::string& connector, std::vector<Download>& downloads)
+	{
+		std::lock_guard locked{_pqTransactionMutex};
+		pqxx::work tx{_pqConnection};
+		try {
+			char uuid[CASS_UUID_STRING_LENGTH];
+			cass_uuid_string(station, uuid);
+			auto result = tx.exec_prepared(SELECT_DOWNLOADS_BY_STATION,
+				uuid,
+				connector
+			);
+			for (const pqxx::row& r : result) {
+				Download d;
+				d.station = station;
+				d.connector = connector;
+				if (r[2].is_null() || r[3].is_null()) // not allowed
+					continue;
+				std::string date = r[1].as<std::string>("");
+				std::istringstream is{date};
+				is >> date::parse("%F %T%z", d.datetime);
+				d.content = r[3].as<std::string>("");
+				d.inserted = r[4].as<bool>(false);
+				d.jobState = r[5].as<std::string>("new");
+
+				tx.exec_prepared0(UPDATE_DOWNLOAD_STATUS,
+					uuid,
+					date,
+					false,
+					"running"
+				);
+
+				downloads.push_back(std::move(d));
+			}
+
 			tx.commit();
 		} catch (const pqxx::pqxx_exception& e) {
 			return false;

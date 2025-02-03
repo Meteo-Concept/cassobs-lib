@@ -47,6 +47,7 @@
 #include "virtual_station.h"
 #include "nbiot_station.h"
 #include "modem_station_configuration.h"
+#include "download.h"
 
 namespace meteodata {
 	/**
@@ -657,6 +658,21 @@ namespace meteodata {
 			 */
 			bool updateDownloadStatus(const CassUuid& station, time_t download, bool inserted, const std::string& jobState);
 
+			/**
+			 * @brief Retrieve all pending downloads for a given station and connector
+			 *
+			 * This method sets the job status of the retrieved downloads to 'running',
+			 * it's not-read-only (but idempotent technically). It's the responsability
+			 * of the caller to set the correct job status at some later point.
+			 *
+			 * @param[in] station The station to insert a download for
+			 * @param[in] connector The connector, identifying the station and download type
+			 * @param[out] downloads The downloads for the station, in chronological order
+			 *
+			 * @return True if everything went well, false if an error occurred
+			 */
+			bool selectDownloadsByStation(const CassUuid& station, const std::string& connector, std::vector<Download>& downloads);
+
 		private:
 			/**
 			 * @brief The prepared statement for the getStationByCoords()
@@ -868,6 +884,7 @@ namespace meteodata {
 			const static std::string UPDATE_CONFIGURATION_STATUS;
 			const static std::string INSERT_DOWNLOAD;
 			const static std::string UPDATE_DOWNLOAD_STATUS;
+			const static std::string SELECT_DOWNLOADS_BY_STATION;
 
 			/**
 			 * @brief Get the max temperature of a day, if recorded in the observations database

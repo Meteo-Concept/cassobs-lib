@@ -14,7 +14,8 @@ pkginclude_HEADERS = \
 		dbconnection_jobs.h\
 		virtual_station.h\
 		nbiot_station.h\
-		modem_station_configuration.h
+		modem_station_configuration.h\
+		download.h
 
 libcassobs2_la_SOURCES = \
 		    dbconnection_common.cpp\
@@ -40,7 +41,8 @@ libcassobs2_la_SOURCES = \
 		    message.h\
 		    virtual_station.h\
 		    nbiot_station.h\
-		    modem_station_configuration.h
+		    modem_station_configuration.h\
+		    download.h
 
 libcassobs2_la_CPPFLAGS = $(PTHREAD_CFLAGS) $(CASSANDRA_CFLAGS) $(DATE_CFLAGS) $(MYSQL_CFLAGS) $(POSTGRES_CFLAGS)
 libcassobs2_la_CXXFLAGS =

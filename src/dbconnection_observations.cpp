@@ -765,14 +765,14 @@ namespace meteodata {
 		);
 
 		_pqConnection.prepare(INSERT_DOWNLOAD,
-			"INSERT INTO downloads (station, datetime, connector, content, inserted) "
-			" VALUES ($1, to_timestamp($2), $3, $4, $5) "
+			"INSERT INTO downloads (station, datetime, connector, content, inserted, job_state) "
+			" VALUES ($1, to_timestamp($2), $3, $4, $5, $6) "
 			" ON CONFLICT (station, datetime) DO UPDATE "
-			" SET connector=$3, content=$4, inserted=$5"
+			" SET connector=$3, content=$4, inserted=$5, job_state=$6"
 		);
 
 		_pqConnection.prepare(UPDATE_DOWNLOAD_STATUS,
-			"UPDATE downloads SET inserted=$3 WHERE station=$1 AND datetime=to_timestamp($2)"
+			"UPDATE downloads SET inserted=$3, job_state=$4 WHERE station=$1 AND datetime=to_timestamp($2)"
 		);
 
 		_pqConnection.prepare(UPSERT_OBSERVATION,
@@ -3193,7 +3193,8 @@ namespace meteodata {
 	}
 
 	bool DbConnectionObservations::insertDownload(const CassUuid& station, time_t datetime,
-		const std::string& connector, const std::string& download, bool inserted)
+		const std::string& connector, const std::string& download,
+		bool inserted, const std::string& jobState)
 	{
 		std::lock_guard locked{_pqTransactionMutex};
 		pqxx::work tx{_pqConnection};
@@ -3205,7 +3206,8 @@ namespace meteodata {
 				date::format("%F %T%z", chrono::system_clock::from_time_t(datetime)),
 				connector,
 				download,
-				inserted
+				inserted,
+				jobState
 			);
 			tx.commit();
 		} catch (const pqxx::pqxx_exception& e) {
@@ -3215,7 +3217,7 @@ namespace meteodata {
 	}
 
 	bool DbConnectionObservations::updateDownloadStatus(const CassUuid& station,
-		time_t datetime, bool inserted)
+		time_t datetime, bool inserted, const std::string& jobState)
 	{
 		std::lock_guard locked{_pqTransactionMutex};
 		pqxx::work tx{_pqConnection};
@@ -3225,7 +3227,8 @@ namespace meteodata {
 			tx.exec_prepared0(UPDATE_DOWNLOAD_STATUS,
 				uuid,
 				date::format("%F %T%z", chrono::system_clock::from_time_t(datetime)),
-				inserted
+				inserted,
+				jobState
 			);
 			tx.commit();
 		} catch (const pqxx::pqxx_exception& e) {

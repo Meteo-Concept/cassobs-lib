@@ -639,20 +639,23 @@ namespace meteodata {
 			 * @param[in] download The raw message downloaded
 			 * @param[in] status The new status, true to mark the configuration as applied and no longer
 			 * active, false otherwise
+			 * @param[in] jobState The job state (usually "new" for
+			 * a new job)
 			 *
 			 * @return True if everything went well, false if an error occurred
 			 */
-			bool insertDownload(const CassUuid& station, time_t datetime, const std::string& connector, const std::string& download, bool inserted);
+			bool insertDownload(const CassUuid& station, time_t datetime, const std::string& connector, const std::string& download, bool inserted, const std::string& jobState = "new");
 
 			/**
 			 * @brief Update the status of a download, to mark it as processed/inserted in DB or not
 			 *
-			 * @param[in] status The new status, true to mark the download as processed and no longer
+			 * @param[in] inserted The new status, true to mark the download as processed and no longer
 			 * active, false otherwise
+			 * @param[in] jobState The jobState ("completed", "running", "aborted", "error")
 			 *
 			 * @return True if everything went well, false if an error occurred
 			 */
-			bool updateDownloadStatus(const CassUuid& station, time_t download, bool inserted);
+			bool updateDownloadStatus(const CassUuid& station, time_t download, bool inserted, const std::string& jobState);
 
 		private:
 			/**

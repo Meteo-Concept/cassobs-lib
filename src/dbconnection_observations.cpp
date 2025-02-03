@@ -766,13 +766,13 @@ namespace meteodata {
 
 		_pqConnection.prepare(INSERT_DOWNLOAD,
 			"INSERT INTO downloads (station, datetime, connector, content, inserted, job_state) "
-			" VALUES ($1, to_timestamp($2), $3, $4, $5, $6) "
+			" VALUES ($1, $2, $3, $4, $5, $6) "
 			" ON CONFLICT (station, datetime) DO UPDATE "
 			" SET connector=$3, content=$4, inserted=$5, job_state=$6"
 		);
 
 		_pqConnection.prepare(UPDATE_DOWNLOAD_STATUS,
-			"UPDATE downloads SET inserted=$3, job_state=$4 WHERE station=$1 AND datetime=to_timestamp($2)"
+			"UPDATE downloads SET inserted=$3, job_state=$4 WHERE station=$1 AND datetime=$2"
 		);
 
 		_pqConnection.prepare(UPSERT_OBSERVATION,

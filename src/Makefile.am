@@ -47,7 +47,7 @@ libcassobs2_la_CXXFLAGS =
 libcassobs2_la_LIBADD = $(PTHREAD_LIBS) $(CASSANDRA_LIBS) $(DATE_LIBS) $(MYSQL_LIBS) $(POSTGRES_LIBS)
 libcassobs2_la_LDFLAGS = -version-info 22:0:0
 
-check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations get_meteofrance_stations compute_minmax compute_month_minmax get_jobs get_map_obs get_virtual_stations get_nbiot_stations get_config insert_timescaledb
+check_PROGRAMS=get_last_data get_mqtt_stations get_rainfall compute_records get_wlv2_stations get_fieldclimate_stations get_normals get_objenious_stations get_liveobjects_stations get_cimel_stations get_meteofrance_stations compute_minmax compute_month_minmax get_jobs get_map_obs get_virtual_stations get_nbiot_stations get_config insert_timescaledb insert_download
 TESTS=$(check_PROGRAMS)
 
 get_last_data_SOURCES = tests/get_last_data.cpp
@@ -144,3 +144,8 @@ insert_timescaledb_SOURCES = tests/insert_timescaledb.cpp
 insert_timescaledb_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
 insert_timescaledb_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
 insert_timescaledb_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)
+
+insert_download_SOURCES = tests/insert_download.cpp
+insert_download_CPPFLAGS = $(libcassobs2_la_CPPFLAGS)
+insert_download_CXXFLAGS = $(libcassobs2_la_CXXFLAGS)
+insert_download_LDADD = libcassobs2.la $(libcassobs2_la_LIBADD)
